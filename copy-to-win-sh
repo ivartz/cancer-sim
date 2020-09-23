@@ -1,0 +1,88 @@
+# bash copy-to-win.sh 3
+
+displacement=$1
+
+# First, mount windows c drive with nomachine session
+
+# Remove existing nifti files
+rm -v ~/Desktop/C/Users/Ivar/Desktop/temp/*.nii*
+
+echo "These files will be copied to Windows"
+
+du -sh 2-T1c.nii.gz \
+      warped.nii.gz \
+      3-T1c.nii.gz \
+      directional-binary-masks-max.nii.gz \
+      neg-field-${displacement}mm-ants.nii.gz \
+      interp-neg-field-${displacement}mm-ants.nii.gz \
+      2-Tumormask.nii.gz \
+      gaussian.nii.gz \
+      interp-gaussian.nii.gz \
+      ellipsoid-mask.nii.gz \
+      outer-ellipsoid-mask.nii.gz \
+      interp-ellipsoid-mask.nii.gz \
+      interp-outer-ellipsoid-mask.nii.gz \
+      original-bounding-box-vector-max.nii.gz \
+      interp-bounding-box-vector-max.nii.gz \
+      2-BrainExtractionMask.nii.gz
+
+# Copy files
+
+cp -v 2-T1c.nii.gz \
+      warped.nii.gz \
+      3-T1c.nii.gz \
+      directional-binary-masks-max.nii.gz \
+      neg-field-${displacement}mm-ants.nii.gz \
+      interp-neg-field-${displacement}mm-ants.nii.gz \
+      2-Tumormask.nii.gz \
+      gaussian.nii.gz \
+      interp-gaussian.nii.gz \
+      ellipsoid-mask.nii.gz \
+      outer-ellipsoid-mask.nii.gz \
+      interp-ellipsoid-mask.nii.gz \
+      interp-outer-ellipsoid-mask.nii.gz \
+      original-bounding-box-vector-max.nii.gz \
+      interp-bounding-box-vector-max.nii.gz \
+      2-BrainExtractionMask.nii.gz ~/Desktop/C/Users/Ivar/Desktop/temp
+
+echo '"/cygdrive/c/Program Files/ITK-SNAP 3.8/bin/ITK-SNAP.exe" -g 2-T1c.nii.gz \
+      -o warped.nii.gz \
+      3-T1c.nii.gz \
+      directional-binary-masks-max.nii.gz \
+      neg-field-'"${displacement}"'mm-ants.nii.gz \
+      interp-neg-field-'"${displacement}"'mm-ants.nii.gz \
+      2-Tumormask.nii.gz \
+      gaussian.nii.gz \
+      interp-gaussian.nii.gz \
+      ellipsoid-mask.nii.gz \
+      outer-ellipsoid-mask.nii.gz \
+      interp-ellipsoid-mask.nii.gz \
+      interp-outer-ellipsoid-mask.nii.gz \
+      original-bounding-box-vector-max.nii.gz \
+      interp-bounding-box-vector-max.nii.gz \
+      2-BrainExtractionMask.nii.gz &' > ~/Desktop/C/Users/Ivar/Desktop/temp/open.sh
+
+#: '
+
+echo '"/cygdrive/c/Users/Ivar/aliza_1.98.18/aliza.exe" \
+      2-T1c.nii.gz \
+      warped.nii.gz \
+      3-T1c.nii.gz \
+      directional-binary-masks-max.nii.gz \
+      neg-field-'"${displacement}"'mm-ants.nii.gz \
+      interp-neg-field-'"${displacement}"'mm-ants.nii.gz \
+      2-Tumormask.nii.gz \
+      gaussian.nii.gz \
+      interp-gaussian.nii.gz \
+      ellipsoid-mask.nii.gz \
+      outer-ellipsoid-mask.nii.gz \
+      interp-ellipsoid-mask.nii.gz \
+      interp-outer-ellipsoid-mask.nii.gz \
+      original-bounding-box-vector-max.nii.gz \
+      interp-bounding-box-vector-max.nii.gz \
+      2-BrainExtractionMask.nii.gz &' >> ~/Desktop/C/Users/Ivar/Desktop/temp/open.sh
+
+#'
+
+echo "run this command in cygwin to open the files:"
+echo "cd /cygdrive/c/Users/Ivar/Desktop/temp && bash /cygdrive/c/Users/Ivar/Desktop/temp/open.sh"

@@ -1,0 +1,13 @@
+*.nii
+*.nii.gz
+*.zip
+bak
+directional-binary-masks-max-animations
+dispout
+dispout-equal
+dispout-equal2
+dispout-interp
+dispout-interp2
+interpolation-demo
+jp
+
