@@ -5,6 +5,7 @@ import sys
 from scipy.interpolate import Rbf, griddata
 from scipy.ndimage import map_coordinates, gaussian_filter
 import gc
+import time
 
 def max_spread_vectors_subset(vectors, positions, num_vecs=100):
     # Select a first vector and its position as the first
@@ -120,7 +121,7 @@ def angle_between(v1, v2):
  
     return np.rad2deg(np.arccos(dot_pr / norms))    
 
-def bounding_box_mask(mask):
+def bounding_box_mask1(mask):
     """
     Returns the coodinates for the geometric center
     as well as x, y, and z widths of a binary mask,
@@ -133,6 +134,24 @@ def bounding_box_mask(mask):
     #z, y, x = mask_flat[:,1], mask_flat[:,2], mask_flat[:,3]
     xmin, ymin, zmin = np.min(x), np.min(y), np.min(z)
     xmax, ymax, zmax = np.max(x), np.max(y), np.max(z)
+    """
+    np.savez("mask.npz", mask)
+
+    print("Look here start!")
+    
+    print("xmin: %i" % xmin)
+    print("ymin: %i" % ymin)
+    print("zmin: %i" % zmin)
+    
+    print("----")
+    
+    print("xmax: %i" % xmax)
+    print("ymax: %i" % ymax)
+    print("zmax: %i" % zmax)
+    
+    print("Look here end!")
+    sys.exit()
+    """
     wx = xmax-xmin
     wy = ymax-ymin
     wz = zmax-zmin
@@ -147,6 +166,75 @@ def bounding_box_mask(mask):
     cy = ymin + wy/2
     cz = zmin + wz/2
     return (np.int(cx), np.int(cy), np.int(cz)), (np.int(wx), np.int(wy), np.int(wz))
+
+def bounding_box_mask(mask):
+    """
+    Returns the coodinates for the geometric center
+    as well as x, y, and z widths of a binary mask,
+    adjusted to an even number
+    """
+    # Nonzero version, interpolation execution time: 11.519090 s
+    #x_nonzeros = np.nonzero(np.sum(mask, axis=(1,2)))[0]
+    #y_nonzeros = np.nonzero(np.sum(mask, axis=(0,2)))[0]
+    #z_nonzeros = np.nonzero(np.sum(mask, axis=(0,1)))[0]
+    # Argwhere version 1, interpolation execution time: 10.904181 s
+    #x_nonzeros = np.argwhere(np.sum(mask, axis=(1,2))).squeeze()
+    #y_nonzeros = np.argwhere(np.sum(mask, axis=(0,2))).squeeze()
+    #z_nonzeros = np.argwhere(np.sum(mask, axis=(0,1))).squeeze()
+    
+    """
+    # Argwhere version 2, interpolation execution time: 10.689049 s BEST SO FAR
+    x_nonzeros = np.argwhere(np.sum(mask, axis=(1,2)))[:,0]
+    y_nonzeros = np.argwhere(np.sum(mask, axis=(0,2)))[:,0]
+    z_nonzeros = np.argwhere(np.sum(mask, axis=(0,1)))[:,0]
+    
+    #
+    x_min, x_max = x_nonzeros[0], x_nonzeros[-1]
+    y_min, y_max = y_nonzeros[0], y_nonzeros[-1]
+    z_min, z_max = z_nonzeros[0], z_nonzeros[-1]
+    """
+    
+    
+    m1, m2, m3 = np.sum(mask, axis=(1,2)), np.sum(mask, axis=(0,2)), np.sum(mask, axis=(0,1))
+    x_nonzeros = np.arange(m1.shape[0])[m1>0]
+    y_nonzeros = np.arange(m2.shape[0])[m2>0]
+    z_nonzeros = np.arange(m3.shape[0])[m3>0]
+    x_min, x_max = x_nonzeros[[0, -1]]
+    y_min, y_max = y_nonzeros[[0, -1]]
+    z_min, z_max = z_nonzeros[[0, -1]]
+    
+    """
+    print(mask)
+    np.savez("mask.npz", mask)
+    
+    print("Look here start!")
+    
+    print("xmin: %i" % xmin)
+    print("ymin: %i" % ymin)
+    print("zmin: %i" % zmin)
+    
+    print("----")
+    
+    print("xmax: %i" % xmax)
+    print("ymax: %i" % ymax)
+    print("zmax: %i" % zmax)
+    
+    print("Look here end!")
+    """
+    wx = x_max-x_min
+    wy = y_max-y_min
+    wz = z_max-z_min
+    # If the widths are odd, add 1 to make them even
+    if wx % 2:
+        wx += 1 
+    if wy % 2:
+        wy += 1
+    if wz % 2:
+        wz += 1
+    cx = x_min + wx//2
+    cy = y_min + wy//2
+    cz = z_min + wz//2
+    return (cx, cy, cz), (wx, wy, wz)
 
 if __name__ == "__main__":
     CLI=argparse.ArgumentParser()
@@ -244,8 +332,10 @@ if __name__ == "__main__":
     
     # Find the bounding box and geometric center
     # of the tumor based on the tumor mask
+    #tumorbbox_geom_center, tumorbbox_widths = \
+    #bounding_box_mask(tumormask_img.get_fdata().astype(np.bool)) # TODO
     tumorbbox_geom_center, tumorbbox_widths = \
-    bounding_box_mask(tumormask_img.get_fdata())
+    bounding_box_mask(tumormask_img.get_fdata().astype(np.int))
     cx, cy, cz = tumorbbox_geom_center
     wx, wy, wz = tumorbbox_widths
     
@@ -428,8 +518,11 @@ if __name__ == "__main__":
     normal_displacement_vectors_remaining = normal_displacement_vectors[-remaining:]
     
     # Create array to hold all directional binary masks
-    bm = np.zeros(ref_img.shape+(num_normal_displacement_vectors,), dtype=np.int)
-        
+    #bm = np.zeros(ref_img.shape+(num_normal_displacement_vectors,), dtype=np.bool) # TODO
+    bm = np.zeros(ref_img.shape+(num_normal_displacement_vectors,), dtype=np.int)# np.int fastest?
+    
+    start_time = time.time()
+    
     # Iterate over even batches of the normal vectors
     for split_num, v in enumerate(np.split(normal_displacement_vectors_to_split, num_splits)):
         print("Processing split %i/%i" % (split_num+1, num_splits))
@@ -462,6 +555,9 @@ if __name__ == "__main__":
         # Save the boolean mask as a binary mask in existing array
         bm[...,-remaining:][m] = 1
         print("Calculated remaining directional masks")
+    
+    print("Cone computation execution time: %f s" %(time.time()-start_time))
+
     print("Number of directional masks calculated: %i" % bm.shape[-1])
     print("Saving directional binary masks to disk")
     """
@@ -487,7 +583,9 @@ if __name__ == "__main__":
     print("Making array for holding all intepolated displacement values and initialize it with nan values")
     field_data_interp = np.empty(ref_img.shape+(3,num_normal_displacement_vectors), dtype=np.float32)
     field_data_interp[:] = np.nan
-
+    
+    
+    
     # Make the array for holding all intepolated gaussian values
     print("Making array for holding all intepolated Gaussian values and initialize it with nan values")
     gaussian_data_interp = np.empty(ref_img.shape+(num_normal_displacement_vectors,), dtype=np.float32)
@@ -498,9 +596,11 @@ if __name__ == "__main__":
     print("Splitting non-intepolated vector field array into three scalar arrays")
     dx, dy, dz = field_data[...,0], field_data[...,1], field_data[...,2]
     
+    start_time = time.time()
     # Iterate over each normal vector, that we just created
     # directional binary masks for
     #for i in range(2, num_normal_displacement_vectors-1): # when num_vecs = 4 (for debug)
+    #a = []
     for i in range(num_normal_displacement_vectors):
         print("Processing vector: %i/%i" % (i+1, num_normal_displacement_vectors))
         # Get the coordinates of the normal vector
@@ -556,6 +656,8 @@ if __name__ == "__main__":
         bmcx, bmcy, bmcz = bm_geom_center
         bmwx, bmwy, bmwz = bm_widths
         
+        #a.append(tuple(bmcx)) # todo
+        
         # Stretch the displacement field towards the skull,
         # using the directional binary mask (bmi), disp_max
         # and interpolation. To do this,
@@ -565,10 +667,12 @@ if __name__ == "__main__":
         # indicating interpolation (stretched binary mask)
         bmi[p_max[0],p_max[1],p_max[2]] = 1
         print("Finding bounding box for directional mask with maximum displaced position added")
+        
+        #a = time.time()
+
         bm_geom_center_interp, bm_widths_interp = bounding_box_mask(bmi)
         bmcx_interp, bmcy_interp, bmcz_interp = bm_geom_center_interp
         bmwx_interp, bmwy_interp, bmwz_interp = bm_widths_interp
-        
         # For diagnostics, store old and intepolated (stretched) bounding box
         orig_bboxes_data[bmcx-bmwx//2:bmcx+bmwx//2, \
                          bmcy-bmwy//2:bmcy+bmwy//2, \
@@ -579,6 +683,9 @@ if __name__ == "__main__":
                            bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
                            bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
                            i] = 1
+        
+        #print(time.time()-a)
+        #exit()
         
         # Find the maximum displacement possible along the nv_d vector 
         # between its starting position and the end of the outer ellipsoid mask
@@ -706,11 +813,14 @@ if __name__ == "__main__":
         """
         #if i == 1:
         #    sys.exit() # TODO
-    """
+    print("Interpolation execution time: %f s" %(time.time()-start_time))
+    #sys.exit()
+    
+    #"""
     print("Garbage collect again")
-    gc.collect()
+    del zi, yi, xi, bmi
     print("Garbage collect again done")
-    """
+    #"""
     # Save old and intepolated (stretched) bounding box to disk
     print("Saving bounding boxes for original directional binary masks to disk")
     orig_bboxes_img = nib.spatialimages.SpatialImage(np.max(orig_bboxes_data, axis=-1), affine=ref_img.affine, header=ref_img.header)
@@ -720,14 +830,38 @@ if __name__ == "__main__":
     interp_bboxes_img = nib.spatialimages.SpatialImage(np.max(interp_bboxes_data, axis=-1), affine=ref_img.affine, header=ref_img.header)
     nib.save(interp_bboxes_img, "interp-bounding-box-vector-max.nii.gz")
     
+    """
+    print("Garbage collect again")
+    del orig_bboxes_data
+    del orig_bboxes_img 
+    del interp_bboxes_data
+    del interp_bboxes_img 
+    gc.collect() # TODO
+    print("Garbage collect again done")
+    """
+    
     # Bounding box interpolation is now done.
     # Aggregate all interpolated data into a single vector field
     # using three final intepolations
     print("Building total intepolated field and Gaussian")
     
     # Take the mean or max over the last axis, excluding nan values
-    print("Computing mean of non-nan displacement values")
-    field_data_interp = np.nanmean(field_data_interp, axis=-1, dtype=np.float32)
+    print("Splitting interpolated displacement values before computing mean")
+    #print(field_data_interp.shape) # TODO
+    #print(field_data_interp.__sizeof__())
+    #np.savez("field_data_interp.npz", field_data_interp)
+    #sys.exit()
+    field_data_interp_x, field_data_interp_y, field_data_interp_z = \
+    field_data_interp[:,:,:,0,:], field_data_interp[:,:,:,1,:], field_data_interp[:,:,:,2,:]
+    
+    print("Computing mean of non-nan x displacement values")
+    field_data_interp_x = np.nanmean(field_data_interp_x, axis=-1, dtype=np.float32)
+    print("Computing mean of non-nan y displacement values")
+    field_data_interp_y = np.nanmean(field_data_interp_y, axis=-1, dtype=np.float32)
+    print("Computing mean of non-nan z displacement values")
+    field_data_interp_z = np.nanmean(field_data_interp_z, axis=-1, dtype=np.float32)
+    
+    field_data_interp = np.stack((field_data_interp_x, field_data_interp_y, field_data_interp_z), axis=-1)
     
     #print("Computing max of non-nan values")
     #field_data_interp_max = np.nanmax(field_data_interp, axis=-1)
@@ -753,7 +887,7 @@ if __name__ == "__main__":
     #print(np.unique(field_data_interp))
     #d = np.nanmean(field_data_interp, axis=-1, dtype=np.float32)
     #d = np.nanmean(field_data_interp, axis=-1)
-
+    
     gaussian_data_interp[np.isnan(gaussian_data_interp)] = 0
     
     # Smooth
@@ -792,7 +926,7 @@ if __name__ == "__main__":
     outer_ellipsoid_mask_interp = gaussian_data_interp <= -0.05 # This was a good default
     outer_ellipsoid_data_interp = np.zeros(gaussian_data_interp.shape, dtype=np.int)
     outer_ellipsoid_data_interp[outer_ellipsoid_mask_interp] = 1
-        
+    
     # Save the mask to nifti
     print("Saving interpolated outer ellipsoid mask")
     outer_ellipsoid_img_interp = \
@@ -800,8 +934,8 @@ if __name__ == "__main__":
     nib.save(outer_ellipsoid_img_interp, "interp-outer-"+args.eout)
     
     # Remove displacements from edges of bounding boxes that went outside of the brain
-    field_data_interp[brainmask_data != 1] = 0
-    gaussian_data_interp[brainmask_data != 1] = 0
+    #field_data_interp[brainmask_data != 1] = 0 # TODO
+    #gaussian_data_interp[brainmask_data != 1] = 0
     
     # Save original (non-intepolated) field
     print("Saving original fields")
@@ -814,6 +948,7 @@ if __name__ == "__main__":
     
     # Save intepolated field
     print("Saving interpolated fields and Gaussian")
+    #np.savez("field_data_interp.npz", field_data_interp) # TODO
     field_img_interp = nib.spatialimages.SpatialImage(field_data_interp, affine=ref_img.affine, header=ref_img.header)
     nib.save(field_img_interp, "interp-"+args.fout)
     

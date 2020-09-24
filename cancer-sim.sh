@@ -120,7 +120,7 @@ python3 cancer-displacement.py --ref 2-T1c.nii.gz \
                                --max_radial_displacement_to_outer_ellipsoid_mask_fraction 1 \
                                --num_vecs 55  \
                                --angle_thr 5 \
-                               --num_splits 4 \
+                               --num_splits 1 \
                                --spline_order 1 \
                                --smoothing 4 \
                                --eout ellipsoid-mask.nii.gz \

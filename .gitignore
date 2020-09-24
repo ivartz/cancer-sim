@@ -1,6 +1,7 @@
 *.nii
 *.nii.gz
 *.zip
+*.npz
 bak
 directional-binary-masks-max-animations
 dispout
