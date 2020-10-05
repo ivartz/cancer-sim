@@ -17,6 +17,7 @@ du -sh 2-T1c.nii.gz \
       interp-neg-field-${displacement}mm-ants.nii.gz \
       2-Tumormask.nii.gz \
       gaussian.nii.gz \
+      perlin-noise.nii.gz \
       interp-gaussian.nii.gz \
       ellipsoid-mask.nii.gz \
       outer-ellipsoid-mask.nii.gz \
@@ -36,6 +37,7 @@ cp -v 2-T1c.nii.gz \
       interp-neg-field-${displacement}mm-ants.nii.gz \
       2-Tumormask.nii.gz \
       gaussian.nii.gz \
+      perlin-noise.nii.gz \
       interp-gaussian.nii.gz \
       ellipsoid-mask.nii.gz \
       outer-ellipsoid-mask.nii.gz \
@@ -53,6 +55,7 @@ echo '"/cygdrive/c/Program Files/ITK-SNAP 3.8/bin/ITK-SNAP.exe" -g 2-T1c.nii.gz 
       interp-neg-field-'"${displacement}"'mm-ants.nii.gz \
       2-Tumormask.nii.gz \
       gaussian.nii.gz \
+      perlin-noise.nii.gz \
       interp-gaussian.nii.gz \
       ellipsoid-mask.nii.gz \
       outer-ellipsoid-mask.nii.gz \
@@ -73,6 +76,7 @@ echo '"/cygdrive/c/Users/Ivar/aliza_1.98.18/aliza.exe" \
       interp-neg-field-'"${displacement}"'mm-ants.nii.gz \
       2-Tumormask.nii.gz \
       gaussian.nii.gz \
+      perlin-noise.nii.gz \
       interp-gaussian.nii.gz \
       ellipsoid-mask.nii.gz \
       outer-ellipsoid-mask.nii.gz \

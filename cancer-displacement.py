@@ -6,6 +6,8 @@ from scipy.interpolate import Rbf, griddata
 from scipy.ndimage import map_coordinates, gaussian_filter
 import gc
 import time
+# Perlin noise library: https://github.com/pvigier/perlin-numpy
+from perlin_numpy import generate_perlin_noise_3d#, generate_perlin_noise_3d
 
 def max_spread_vectors_subset(vectors, positions, num_vecs=100):
     # Select a first vector and its position as the first
@@ -305,10 +307,23 @@ if __name__ == "__main__":
       default=1,
     )
     CLI.add_argument(
-      "--smoothing",
-      help="Standard deviation for smoothing of the final intepolated x, y and z displacement",
+      "--smoothing_std",
+      help="Standard deviation of smoothing of the final intepolated x, y and z displacement",
       type=float,
       default=1,
+    )    
+    CLI.add_argument(
+      "--perlin_noise_res",
+      #help="If Gaussian noise used, standard deviation (mean=0); if perlin noise; number of periods of noise to generate along each axis (mean ~0). The noise is added to the final intepolated Gaussian and x, y and z displacement (before scaling displacements to specified max displacement, and before scaling displacements that went oustide of the brain)",
+      help="The number of periods of noise to generate along each axis for Perlin noise. The noise is added to the final intepolated Gaussian and x, y and z displacement (before scaling displacements to specified max displacement, and before scaling displacements that went oustide of the brain)",
+      type=float,
+      default=0.1,
+    )    
+    CLI.add_argument(
+      "--perlin_noise_abs_max",
+      help="The absolute value of maximum Perlin noise to add. The noise is added to the final intepolated Gaussian and x, y and z displacement (before scaling displacements to specified max displacement, and before scaling displacements that went oustide of the brain)",
+      type=float,
+      default=0.2,
     )    
     CLI.add_argument(
       "--eout",
@@ -497,7 +512,9 @@ if __name__ == "__main__":
     num_splits = args.num_splits
     
     print("Number of splits: %i" % num_splits)
-    print("Gaussian smoothing standard deviation: %f" % args.smoothing)
+    print("Gaussian smoothing standard deviation: %f" % args.smoothing_std)
+    print("Additive Perlin noise number of periods along axis: %f" % args.perlin_noise_res)
+    print("Additive Perlin noise absolute of maximum noise: %f" % args.perlin_noise_abs_max)
     print("Spline order for intepolation in map_coordinates: %i" % args.spline_order)
     
     # Calculate the split size and remainder
@@ -963,15 +980,71 @@ if __name__ == "__main__":
     
     # Smooth
     print("Smoothing interpolated x displacement")
-    field_data_interp[...,0] = gaussian_filter(field_data_interp[...,0], sigma=args.smoothing)
+    field_data_interp[...,0] = gaussian_filter(field_data_interp[...,0], sigma=args.smoothing_std)
     print("Smoothing interpolated y displacement")
-    field_data_interp[...,1] = gaussian_filter(field_data_interp[...,1], sigma=args.smoothing)
+    field_data_interp[...,1] = gaussian_filter(field_data_interp[...,1], sigma=args.smoothing_std)
     print("Smoothing interpolated z displacement")
-    field_data_interp[...,2] = gaussian_filter(field_data_interp[...,2], sigma=args.smoothing)
+    field_data_interp[...,2] = gaussian_filter(field_data_interp[...,2], sigma=args.smoothing_std)
     print("Smoothing interpolated Gaussian")
-    gaussian_data_interp = gaussian_filter(gaussian_data_interp, sigma=args.smoothing)
+    gaussian_data_interp = gaussian_filter(gaussian_data_interp, sigma=args.smoothing_std)
+
+    # Add noise to the interpolated field and Gaussian BEFORE scaling with specified displacement
+    print("Adding noise")
+    
+    # Gaussian noise
+    """
+    field_data += \
+    np.random.normal(loc=0,scale=args.noise_param,size=field_data.shape)
+    field_data_interp += \
+    np.random.normal(loc=0,scale=args.noise_param,size=field_data_interp.shape)
+    gaussian_data_interp += \
+    np.random.normal(loc=0,scale=args.noise_param,size=gaussian_data_interp.shape)
+    """
+    
+    # Perlin noise
+    # https://github.com/pvigier/perlin-numpy
+    #"""
+    # Find the number of periods of noise to generate along each axis, based on args.perlin_noise_res
+    resx, resy, resz = xsize//np.int(xsize*args.perlin_noise_res),\
+                       ysize//np.int(ysize*args.perlin_noise_res),\
+                       zsize//np.int(zsize*args.perlin_noise_res)
+    # Round xsize, ysize, zsize integers down to nearest multiple of resx, resy, resz
+    # to create xsize_perlin, ysize_perlin, zsize_perlin
+    xsize_perlin = xsize - (xsize%resx)
+    ysize_perlin = ysize - (ysize%resy)
+    zsize_perlin = zsize - (zsize%resz)
+    # Generate perlin noise
+    print("Generating Perlin noise for x displacement")
+    noisex = \
+    args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+    print("Generating Perlin noise for y displacement")
+    noisey = \
+    args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+    print("Generating Perlin noise for z displacement")
+    noisez = \
+    args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+    print("Adding perlin noise to original displacement field")
+    field_data[:xsize_perlin,:ysize_perlin,:zsize_perlin,0] += noisex
+    field_data[:xsize_perlin,:ysize_perlin,:zsize_perlin,1] += noisey
+    field_data[:xsize_perlin,:ysize_perlin,:zsize_perlin,2] += noisez
+    print("Adding perlin noise to interpolated displacement field")
+    field_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin,0] += noisex
+    field_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin,1] += noisey
+    field_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin,2] += noisez
+    print("Computing absolute value of Perlin noise field")
+    noisenorm = np.linalg.norm(np.stack((noisex, noisey, noisez), axis=-1), axis=-1)
+    print("Adding perlin noise to interpolated Gaussian")
+    gaussian_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin] += noisenorm
+    #"""
+    
+    # Save Perlin field
+    print("Saving Perlin noise field")
+    perlin_img = \
+    nib.spatialimages.SpatialImage(np.stack((noisex, noisey, noisez), axis=-1), affine=ref_img.affine, header=ref_img.header)
+    nib.save(perlin_img, "perlin-noise.nii.gz")
     
     # Finally, scale displacement fields with the specified intensity
+    print("Scaling displacement fields")
     field_data *= args.displacement
     field_data_interp *= args.displacement
     
@@ -1001,8 +1074,8 @@ if __name__ == "__main__":
     outer_ellipsoid_img_interp = \
     nib.spatialimages.SpatialImage(outer_ellipsoid_data_interp, affine=ref_img.affine, header=ref_img.header)
     nib.save(outer_ellipsoid_img_interp, "interp-outer-"+args.eout)
-    
-    # Remove displacements from edges of bounding boxes starting from outside of the brain
+        
+    # Remove displacements from bounding boxes starting from outside of the brain
     field_data_interp[brainmask_data != 1] = 0
     gaussian_data_interp[brainmask_data != 1] = 0
     

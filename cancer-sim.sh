@@ -12,6 +12,7 @@ rm normal-ellipsoid-mask.nii
 rm directional-binary-masks-max.nii
 rm original-bounding-box-vector-max.nii
 rm interp-bounding-box-vector-max.nii
+rm perlin-noise.nii
 rm interp-ellipsoid-mask.nii
 rm interp-outer-ellipsoid-mask.nii
 rm field.nii
@@ -119,7 +120,6 @@ GOOD displacement 4
                                --spline_order 1 \
                                --smoothing 4 \
 
-
 '
 
 python3 cancer-displacement.py --ref 2-T1c.nii.gz \
@@ -133,7 +133,9 @@ python3 cancer-displacement.py --ref 2-T1c.nii.gz \
                                --angle_thr 20 \
                                --num_splits 4 \
                                --spline_order 1 \
-                               --smoothing 4 \
+                               --smoothing_std 4 \
+                               --perlin_noise_res 0.1 \
+                               --perlin_noise_abs_max 0.4 \
                                --eout ellipsoid-mask.nii.gz \
                                --fout field.nii.gz
 
@@ -194,6 +196,7 @@ gunzip -f normal-ellipsoid-mask.nii.gz
 gunzip -f directional-binary-masks-max.nii.gz
 gunzip -f original-bounding-box-vector-max.nii.gz
 gunzip -f interp-bounding-box-vector-max.nii.gz
+gunzip -f perlin-noise.nii.gz
 gunzip -f interp-ellipsoid-mask.nii.gz
 gunzip -f interp-outer-ellipsoid-mask.nii.gz
 gunzip -f field.nii.gz
