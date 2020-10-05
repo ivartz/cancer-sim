@@ -108,23 +108,39 @@ bash cancer-sim.sh 6
                                --spline_order 1 \
                                --smoothing 4 \
 
+GOOD displacement 4
+                               --displacement $displacement \
+                               --gaussian_range_one_sided 5 \
+                               --max_radial_displacement_to_brainmask_fraction 0.2 \
+                               --max_radial_displacement_to_outer_ellipsoid_mask_fraction 1 \
+                               --num_vecs 55  \
+                               --angle_thr 20 \
+                               --num_splits 4 \
+                               --spline_order 1 \
+                               --smoothing 4 \
+
 
 '
 
 python3 cancer-displacement.py --ref 2-T1c.nii.gz \
                                --tumormask 2-Tumormask.nii.gz \
                                --brainmask 2-BrainExtractionMask.nii.gz \
-                               --displacement 1 \
-                               --gaussian_range_one_sided 5 \
+                               --displacement $displacement \
+                               --gaussian_range_one_sided 6 \
                                --max_radial_displacement_to_brainmask_fraction 1 \
                                --max_radial_displacement_to_outer_ellipsoid_mask_fraction 1 \
                                --num_vecs 55  \
-                               --angle_thr 5 \
-                               --num_splits 1 \
+                               --angle_thr 20 \
+                               --num_splits 4 \
                                --spline_order 1 \
                                --smoothing 4 \
                                --eout ellipsoid-mask.nii.gz \
                                --fout field.nii.gz
+
+#bash converttoantstransform.sh interp-neg-field.nii.gz interp-neg-field-${displacement}mm-ants.nii.gz
+
+#itksnap -g interp-neg-field.nii.gz &
+#itksnap -g interp-neg-field-${displacement}mm-ants.nii.gz &
 
 bash displace-3d.sh $displacement
 
