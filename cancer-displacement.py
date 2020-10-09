@@ -697,6 +697,26 @@ if __name__ == "__main__":
         bmcx, bmcy, bmcz = bm_geom_center
         bmwx, bmwy, bmwz = bm_widths
         
+        # Calculate a fraction used for scaling the interpolated 
+        # displacement accrong to how good the bounding box of 
+        # the cone correspons to the minimal bounding box of an elliptic cone.
+        # https://mathworld.wolfram.com/EllipticCone.html
+        # Better fit, fraction closer to 1.
+        # The reason for doing this is that the volume of a bounding box
+        # for an original or extended cone varies depending on how minimal 
+        # the bounding box convers the cone
+        # (how optimal the bounding box is enclosing the cone in the fixed axis reference space).
+        # A = volume of an elliptic cone
+        # B = volume of the minimal boundinb box
+        # Then B/A = 3/pi
+        # The fraction is calculated as 
+        # scale_fr = 1-(3/pi)/(B_real/A_real)
+        # Where A_real is the volume of the original elliptic cone
+        # and B_real is the volume of its bounding box
+        #scale_fr = 1-(3/np.pi)/(np.prod(bm_widths)/np.sum(bmi))
+        #scale_fr = 1
+        #print("Will scale interpolated displacement for the extended cone with: %f" % scale_fr)
+        
         # Stretch the displacement field towards the skull,
         # using the directional binary mask (bmi), disp_max_brain,
         # disp_max_bmi, dx, dy, dz, field_data
@@ -873,24 +893,45 @@ if __name__ == "__main__":
         gaussian_data_interp_part = map_coordinates(gaussian_data, [xi.ravel(), yi.ravel(), zi.ravel()], order=args.spline_order)\
                                                                   .reshape(bmwx_interp, bmwy_interp, bmwz_interp)
         
-        print("Inserting into existing array")
+        print("Inserting interpolated displacements and Gaussian into existing arrays")
         field_data_interp[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
                           bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
                           bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
-                          0, i] = dxi
+                          0, i] = dxi#*scale_fr
         field_data_interp[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
                           bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
                           bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
-                          1, i] = dyi
+                          1, i] = dyi#*scale_fr
         field_data_interp[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
                           bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
                           bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
-                          2, i] = dzi
+                          2, i] = dzi#*scale_fr
         gaussian_data_interp[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
                              bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
                              bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
-                             i] = gaussian_data_interp_part
+                             i] = gaussian_data_interp_part#*scale_fr
         print("Inserting done")
+        
+        print("Scalig interpolated displacements and Gaussian using dot products")
+        # Invert operation 6
+        nv_d[-1] *= -1
+        interp_directional_scaling = np.dot(np.stack((dxi, dyi, dzi), axis=-1), nv_d)
+        field_data_interp[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
+                          bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
+                          bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
+                          0, i] *= interp_directional_scaling#*scale_fr
+        field_data_interp[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
+                          bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
+                          bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
+                          1, i] *= interp_directional_scaling#*scale_fr
+        field_data_interp[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
+                          bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
+                          bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
+                          2, i] *= interp_directional_scaling#*scale_fr
+        gaussian_data_interp[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
+                             bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
+                             bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
+                             i] *= interp_directional_scaling#*scale_fr
         
         """
         # Garbage collect
@@ -941,12 +982,18 @@ if __name__ == "__main__":
     field_data_interp_x, field_data_interp_y, field_data_interp_z = \
     field_data_interp[:,:,:,0,:], field_data_interp[:,:,:,1,:], field_data_interp[:,:,:,2,:]
     
-    print("Computing mean of non-nan x displacement values")
-    field_data_interp_x = np.nanmean(field_data_interp_x, axis=-1, dtype=np.float32)
-    print("Computing mean of non-nan y displacement values")
-    field_data_interp_y = np.nanmean(field_data_interp_y, axis=-1, dtype=np.float32)
-    print("Computing mean of non-nan z displacement values")
-    field_data_interp_z = np.nanmean(field_data_interp_z, axis=-1, dtype=np.float32)
+    print("Computing max of non-nan x displacement values")
+    #field_data_interp_x = np.nanmean(field_data_interp_x, axis=-1, dtype=np.float32)
+    #field_data_interp_x = np.nanmin(field_data_interp_x, axis=-1)
+    field_data_interp_x = np.nanmax(field_data_interp_x, axis=-1)
+    print("Computing max of non-nan y displacement values")
+    #field_data_interp_y = np.nanmean(field_data_interp_y, axis=-1, dtype=np.float32)
+    #field_data_interp_y = np.nanmin(field_data_interp_y, axis=-1)
+    field_data_interp_y = np.nanmax(field_data_interp_y, axis=-1)
+    print("Computing max of non-nan z displacement values")
+    #field_data_interp_z = np.nanmean(field_data_interp_z, axis=-1, dtype=np.float32)
+    #field_data_interp_z = np.nanmin(field_data_interp_z, axis=-1)
+    field_data_interp_z = np.nanmax(field_data_interp_z, axis=-1)
     
     # Stack the displacements together to make a field again
     field_data_interp = np.stack((field_data_interp_x, field_data_interp_y, field_data_interp_z), axis=-1)
@@ -961,8 +1008,10 @@ if __name__ == "__main__":
     #field_data_interp = field_data_interp_min
     #field_data_interp[-field_data_interp_max < field_data_interp_min] = field_data_interp_max[-field_data_interp_max < field_data_interp_min]
 
-    print("Computing mean of non-nan Gaussian values")
-    gaussian_data_interp = np.nanmean(gaussian_data_interp, axis=-1, dtype=np.float32)
+    print("Computing max of non-nan Gaussian values")
+    #gaussian_data_interp = np.nanmean(gaussian_data_interp, axis=-1, dtype=np.float32)
+    #gaussian_data_interp = np.nanmin(gaussian_data_interp, axis=-1)
+    gaussian_data_interp = np.nanmax(gaussian_data_interp, axis=-1)
     
     """
     print("Garbage collect again")
@@ -989,7 +1038,7 @@ if __name__ == "__main__":
     gaussian_data_interp = gaussian_filter(gaussian_data_interp, sigma=args.smoothing_std)
 
     # Add noise to the interpolated field and Gaussian BEFORE scaling with specified displacement
-    print("Adding noise")
+    #print("Adding noise")
     
     # Gaussian noise
     """
@@ -1001,47 +1050,48 @@ if __name__ == "__main__":
     np.random.normal(loc=0,scale=args.noise_param,size=gaussian_data_interp.shape)
     """
     
-    # Perlin noise
-    # https://github.com/pvigier/perlin-numpy
-    #"""
-    # Find the number of periods of noise to generate along each axis, based on args.perlin_noise_res
-    resx, resy, resz = xsize//np.int(xsize*args.perlin_noise_res),\
-                       ysize//np.int(ysize*args.perlin_noise_res),\
-                       zsize//np.int(zsize*args.perlin_noise_res)
-    # Round xsize, ysize, zsize integers down to nearest multiple of resx, resy, resz
-    # to create xsize_perlin, ysize_perlin, zsize_perlin
-    xsize_perlin = xsize - (xsize%resx)
-    ysize_perlin = ysize - (ysize%resy)
-    zsize_perlin = zsize - (zsize%resz)
-    # Generate perlin noise
-    print("Generating Perlin noise for x displacement")
-    noisex = \
-    args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
-    print("Generating Perlin noise for y displacement")
-    noisey = \
-    args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
-    print("Generating Perlin noise for z displacement")
-    noisez = \
-    args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
-    print("Adding perlin noise to original displacement field")
-    field_data[:xsize_perlin,:ysize_perlin,:zsize_perlin,0] += noisex
-    field_data[:xsize_perlin,:ysize_perlin,:zsize_perlin,1] += noisey
-    field_data[:xsize_perlin,:ysize_perlin,:zsize_perlin,2] += noisez
-    print("Adding perlin noise to interpolated displacement field")
-    field_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin,0] += noisex
-    field_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin,1] += noisey
-    field_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin,2] += noisez
-    print("Computing absolute value of Perlin noise field")
-    noisenorm = np.linalg.norm(np.stack((noisex, noisey, noisez), axis=-1), axis=-1)
-    print("Adding perlin noise to interpolated Gaussian")
-    gaussian_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin] += noisenorm
-    #"""
-    
-    # Save Perlin field
-    print("Saving Perlin noise field")
-    perlin_img = \
-    nib.spatialimages.SpatialImage(np.stack((noisex, noisey, noisez), axis=-1), affine=ref_img.affine, header=ref_img.header)
-    nib.save(perlin_img, "perlin-noise.nii.gz")
+    if args.perlin_noise_abs_max > 0:
+        # Perlin noise
+        # https://github.com/pvigier/perlin-numpy
+        #"""
+        # Find the number of periods of noise to generate along each axis, based on args.perlin_noise_res
+        resx, resy, resz = xsize//np.int(xsize*args.perlin_noise_res),\
+                           ysize//np.int(ysize*args.perlin_noise_res),\
+                           zsize//np.int(zsize*args.perlin_noise_res)
+        # Round xsize, ysize, zsize integers down to nearest multiple of resx, resy, resz
+        # to create xsize_perlin, ysize_perlin, zsize_perlin
+        xsize_perlin = xsize - (xsize%resx)
+        ysize_perlin = ysize - (ysize%resy)
+        zsize_perlin = zsize - (zsize%resz)
+        # Generate perlin noise
+        print("Generating Perlin noise for x displacement")
+        noisex = \
+        args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+        print("Generating Perlin noise for y displacement")
+        noisey = \
+        args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+        print("Generating Perlin noise for z displacement")
+        noisez = \
+        args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+        print("Adding perlin noise to original displacement field")
+        field_data[:xsize_perlin,:ysize_perlin,:zsize_perlin,0] += noisex
+        field_data[:xsize_perlin,:ysize_perlin,:zsize_perlin,1] += noisey
+        field_data[:xsize_perlin,:ysize_perlin,:zsize_perlin,2] += noisez
+        print("Adding perlin noise to interpolated displacement field")
+        field_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin,0] += noisex
+        field_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin,1] += noisey
+        field_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin,2] += noisez
+        print("Computing absolute value of Perlin noise field")
+        noisenorm = np.linalg.norm(np.stack((noisex, noisey, noisez), axis=-1), axis=-1)
+        print("Adding perlin noise to interpolated Gaussian")
+        gaussian_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin] += noisenorm
+        #"""
+        
+        # Save Perlin field
+        print("Saving Perlin noise field")
+        perlin_img = \
+        nib.spatialimages.SpatialImage(np.stack((noisex, noisey, noisez), axis=-1), affine=ref_img.affine, header=ref_img.header)
+        nib.save(perlin_img, "perlin-noise.nii.gz")
     
     # Finally, scale displacement fields with the specified intensity
     print("Scaling displacement fields")
@@ -1079,6 +1129,7 @@ if __name__ == "__main__":
     field_data_interp[brainmask_data != 1] = 0
     gaussian_data_interp[brainmask_data != 1] = 0
     
+    #"""
     # Avoid displacing outside of the brain mask
     print("Scaling interpolated displacement field to not displace outside of the brain mask")
     # Get all the positions (points) within the brian mask
@@ -1139,6 +1190,7 @@ if __name__ == "__main__":
     dinterpmask[points_outside_mask] = dinterpmask_restricted
     dinterpmask[:,-1] *= -1 # NB! Invert operation 5 (invert z component back, for ANTs)
     field_data_interp[brainmask_data == 1] = dinterpmask
+    #"""
     
     # Save original (non-intepolated) field
     print("Saving original fields")
@@ -1158,10 +1210,10 @@ if __name__ == "__main__":
     # Also save the negative of the field (since ITK-SNAP needs the negative visualize correctly)
     field_oppos_img_interp = nib.spatialimages.SpatialImage(-field_data_interp, affine=ref_img.affine, header=ref_img.header)
     nib.save(field_oppos_img_interp, "interp-neg-"+args.fout)
-
+    
     gaussian_img_interp = \
     nib.spatialimages.SpatialImage(-gaussian_data_interp, affine=ref_img.affine, header=ref_img.header)
     nib.save(gaussian_img_interp, "interp-gaussian.nii.gz")
-
+    
     print(sys.argv[0] + " done")
     

@@ -1,11 +1,16 @@
-# bash copy-to-win.sh 3
+# bash copy-to-client.sh 3
 
 displacement=$1
 
 # First, mount windows c drive with nomachine session
 
 # Remove existing nifti files
-rm -v ~/Desktop/C/Users/Ivar/Desktop/temp/*.nii*
+# Achit
+#rm -v ~/Desktop/C/Users/Ivar/Desktop/temp/*.nii*
+# Cube
+#rm -v ~/Desktop/C/Users/ivar/Desktop/temp/*.nii*
+# signatur
+rm -v ~/Desktop/root/home/ivar/Desktop/temp/*.nii*
 
 echo "These files will be copied to Windows"
 
@@ -45,9 +50,15 @@ cp -v 2-T1c.nii.gz \
       interp-outer-ellipsoid-mask.nii.gz \
       original-bounding-box-vector-max.nii.gz \
       interp-bounding-box-vector-max.nii.gz \
-      2-BrainExtractionMask.nii.gz ~/Desktop/C/Users/Ivar/Desktop/temp
+      2-BrainExtractionMask.nii.gz ~/Desktop/root/home/ivar/Desktop/temp
 
-echo '"/cygdrive/c/Program Files/ITK-SNAP 3.8/bin/ITK-SNAP.exe" -g 2-T1c.nii.gz \
+      #2-BrainExtractionMask.nii.gz ~/Desktop/C/Users/Ivar/Desktop/temp      
+      #2-BrainExtractionMask.nii.gz ~/Desktop/C/Users/ivar/Desktop/temp
+
+#echo '"/cygdrive/c/Program Files/ITK-SNAP 3.8/bin/ITK-SNAP.exe" -g 2-T1c.nii.gz \
+#echo 'ITK-SNAP.exe -g 2-T1c.nii.gz \
+
+echo '/home/ivar/itksnap-3.8.0-20190612-Linux-gcc64/bin/itksnap -g 2-T1c.nii.gz \
       -o warped.nii.gz \
       3-T1c.nii.gz \
       directional-binary-masks-max.nii.gz \
@@ -63,11 +74,16 @@ echo '"/cygdrive/c/Program Files/ITK-SNAP 3.8/bin/ITK-SNAP.exe" -g 2-T1c.nii.gz 
       interp-outer-ellipsoid-mask.nii.gz \
       original-bounding-box-vector-max.nii.gz \
       interp-bounding-box-vector-max.nii.gz \
-      2-BrainExtractionMask.nii.gz &' > ~/Desktop/C/Users/Ivar/Desktop/temp/open.sh
+      2-BrainExtractionMask.nii.gz &' > ~/Desktop/root/home/ivar/Desktop/temp/open.sh
+
+      #2-BrainExtractionMask.nii.gz &' > ~/Desktop/C/Users/Ivar/Desktop/temp/open.sh      
+      #2-BrainExtractionMask.nii.gz &' > ~/Desktop/C/Users/ivar/Desktop/temp/open.sh
 
 #: '
+#echo '"/cygdrive/c/Users/ivar/aliza_1.98.32/aliza.exe" \
+#echo '"/cygdrive/c/Users/Ivar/aliza_1.98.18/aliza.exe" \
 
-echo '"/cygdrive/c/Users/Ivar/aliza_1.98.18/aliza.exe" \
+echo 'aliza \
       2-T1c.nii.gz \
       warped.nii.gz \
       3-T1c.nii.gz \
@@ -84,9 +100,14 @@ echo '"/cygdrive/c/Users/Ivar/aliza_1.98.18/aliza.exe" \
       interp-outer-ellipsoid-mask.nii.gz \
       original-bounding-box-vector-max.nii.gz \
       interp-bounding-box-vector-max.nii.gz \
-      2-BrainExtractionMask.nii.gz &' >> ~/Desktop/C/Users/Ivar/Desktop/temp/open.sh
+      2-BrainExtractionMask.nii.gz &' >> ~/Desktop/root/home/ivar/Desktop/temp/open.sh
+      
+      #2-BrainExtractionMask.nii.gz &' >> ~/Desktop/C/Users/ivar/Desktop/temp/open.sh
+      #2-BrainExtractionMask.nii.gz &' >> ~/Desktop/C/Users/Ivar/Desktop/temp/open.sh
 
 #'
 
 echo "run this command in cygwin to open the files:"
-echo "cd /cygdrive/c/Users/Ivar/Desktop/temp && bash /cygdrive/c/Users/Ivar/Desktop/temp/open.sh"
+echo "cd ~/Desktop/temp && bash open.sh"
+#echo "cd /cygdrive/c/Users/Ivar/Desktop/temp && bash /cygdrive/cUsers/Ivar/Desktop/temp/open.sh"
+#echo "cd /cygdrive/c/Users/ivar/Desktop/temp && bash /cygdrive/c/Users/ivar/Desktop/temp/open.sh"

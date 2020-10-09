@@ -1,7 +1,7 @@
 #bash cancer-sim <maximum radial displacement [mm]>
 
 # How much displacement to simulate [mm]
-displacement=$1
+#displacement=$1
 
 : '
 rm gaussian.nii
@@ -120,12 +120,8 @@ GOOD displacement 4
                                --spline_order 1 \
                                --smoothing 4 \
 
-'
-
-python3 cancer-displacement.py --ref 2-T1c.nii.gz \
-                               --tumormask 2-Tumormask.nii.gz \
-                               --brainmask 2-BrainExtractionMask.nii.gz \
-                               --displacement $displacement \
+Perhaps the most realistic global displacement model yet
+displacement = 5
                                --gaussian_range_one_sided 6 \
                                --max_radial_displacement_to_brainmask_fraction 1 \
                                --max_radial_displacement_to_outer_ellipsoid_mask_fraction 1 \
@@ -134,10 +130,30 @@ python3 cancer-displacement.py --ref 2-T1c.nii.gz \
                                --num_splits 4 \
                                --spline_order 1 \
                                --smoothing_std 4 \
-                               --perlin_noise_res 0.1 \
-                               --perlin_noise_abs_max 0.4 \
+                               --perlin_noise_res 0.05 \
+                               --perlin_noise_abs_max 0.25 \
+
+'
+displacement=8
+python3 cancer-displacement.py --ref 2-T1c.nii.gz \
+                               --tumormask 2-Tumormask.nii.gz \
+                               --brainmask 2-BrainExtractionMask.nii.gz \
+                               --displacement $displacement \
+                               --gaussian_range_one_sided 6 \
+                               --max_radial_displacement_to_brainmask_fraction 1 \
+                               --max_radial_displacement_to_outer_ellipsoid_mask_fraction 1 \
+                               --num_vecs 100  \
+                               --angle_thr 7 \
+                               --num_splits 4 \
+                               --spline_order 1 \
+                               --smoothing_std 4 \
+                               --perlin_noise_res 0.07 \
+                               --perlin_noise_abs_max 0.2 \
                                --eout ellipsoid-mask.nii.gz \
                                --fout field.nii.gz
+
+#                                --perlin_noise_abs_max 0.25 good \
+
 
 #bash converttoantstransform.sh interp-neg-field.nii.gz interp-neg-field-${displacement}mm-ants.nii.gz
 
@@ -146,7 +162,7 @@ python3 cancer-displacement.py --ref 2-T1c.nii.gz \
 
 bash displace-3d.sh $displacement
 
-bash copy-to-win-sh $displacement
+bash copy-to-client.sh $displacement
 
 : '
 bash converttoantstransform.sh field.nii.gz field-ants.nii.gz
