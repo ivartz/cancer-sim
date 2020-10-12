@@ -1,6 +1,6 @@
-# bash copy-to-client.sh 3
-
-displacement=$1
+# bash copy-to-client.sh results 3
+outdir=$1
+LC_ALL=C printf -v displacement %.1f $2 # Format the float input to string with one decimal and always use . as the decimal separator
 
 # First, mount windows c drive with nomachine session
 
@@ -15,41 +15,41 @@ rm -v ~/Desktop/root/home/ivar/Desktop/temp/*.nii*
 echo "These files will be copied to Windows"
 
 du -sh 2-T1c.nii.gz \
-      warped.nii.gz \
+      $outdir/warped.nii.gz \
       3-T1c.nii.gz \
-      directional-binary-masks-max.nii.gz \
-      neg-field-${displacement}mm-ants.nii.gz \
-      interp-neg-field-${displacement}mm-ants.nii.gz \
+      $outdir/directional-binary-masks-max.nii.gz \
+      $outdir/neg-field-${displacement}mm-ants.nii.gz \
+      $outdir/interp-neg-field-${displacement}mm-ants.nii.gz \
       2-Tumormask.nii.gz \
-      gaussian.nii.gz \
-      perlin-noise.nii.gz \
-      interp-gaussian.nii.gz \
-      ellipsoid-mask.nii.gz \
-      outer-ellipsoid-mask.nii.gz \
-      interp-ellipsoid-mask.nii.gz \
-      interp-outer-ellipsoid-mask.nii.gz \
-      original-bounding-box-vector-max.nii.gz \
-      interp-bounding-box-vector-max.nii.gz \
+      $outdir/gaussian.nii.gz \
+      $outdir/perlin-noise.nii.gz \
+      $outdir/interp-gaussian.nii.gz \
+      $outdir/ellipsoid-mask.nii.gz \
+      $outdir/outer-ellipsoid-mask.nii.gz \
+      $outdir/interp-ellipsoid-mask.nii.gz \
+      $outdir/interp-outer-ellipsoid-mask.nii.gz \
+      $outdir/original-bounding-box-vector-max.nii.gz \
+      $outdir/interp-bounding-box-vector-max.nii.gz \
       2-BrainExtractionMask.nii.gz
 
 # Copy files
 
 cp -v 2-T1c.nii.gz \
-      warped.nii.gz \
+      $outdir/warped.nii.gz \
       3-T1c.nii.gz \
-      directional-binary-masks-max.nii.gz \
-      neg-field-${displacement}mm-ants.nii.gz \
-      interp-neg-field-${displacement}mm-ants.nii.gz \
+      $outdir/directional-binary-masks-max.nii.gz \
+      $outdir/neg-field-${displacement}mm-ants.nii.gz \
+      $outdir/interp-neg-field-${displacement}mm-ants.nii.gz \
       2-Tumormask.nii.gz \
-      gaussian.nii.gz \
-      perlin-noise.nii.gz \
-      interp-gaussian.nii.gz \
-      ellipsoid-mask.nii.gz \
-      outer-ellipsoid-mask.nii.gz \
-      interp-ellipsoid-mask.nii.gz \
-      interp-outer-ellipsoid-mask.nii.gz \
-      original-bounding-box-vector-max.nii.gz \
-      interp-bounding-box-vector-max.nii.gz \
+      $outdir/gaussian.nii.gz \
+      $outdir/perlin-noise.nii.gz \
+      $outdir/interp-gaussian.nii.gz \
+      $outdir/ellipsoid-mask.nii.gz \
+      $outdir/outer-ellipsoid-mask.nii.gz \
+      $outdir/interp-ellipsoid-mask.nii.gz \
+      $outdir/interp-outer-ellipsoid-mask.nii.gz \
+      $outdir/original-bounding-box-vector-max.nii.gz \
+      $outdir/interp-bounding-box-vector-max.nii.gz \
       2-BrainExtractionMask.nii.gz ~/Desktop/root/home/ivar/Desktop/temp
 
       #2-BrainExtractionMask.nii.gz ~/Desktop/C/Users/Ivar/Desktop/temp      

@@ -134,7 +134,8 @@ displacement = 5
                                --perlin_noise_abs_max 0.25 \
 
 '
-displacement=8
+displacement=12
+outdir="/home/ivar/Documents/testres"
 python3 cancer-displacement.py --ref 2-T1c.nii.gz \
                                --tumormask 2-Tumormask.nii.gz \
                                --brainmask 2-BrainExtractionMask.nii.gz \
@@ -142,15 +143,14 @@ python3 cancer-displacement.py --ref 2-T1c.nii.gz \
                                --gaussian_range_one_sided 6 \
                                --max_radial_displacement_to_brainmask_fraction 1 \
                                --max_radial_displacement_to_outer_ellipsoid_mask_fraction 1 \
-                               --num_vecs 100  \
+                               --num_vecs 64 \
                                --angle_thr 7 \
                                --num_splits 4 \
                                --spline_order 1 \
                                --smoothing_std 4 \
-                               --perlin_noise_res 0.07 \
-                               --perlin_noise_abs_max 0.2 \
-                               --eout ellipsoid-mask.nii.gz \
-                               --fout field.nii.gz
+                               --perlin_noise_res 0.08 \
+                               --perlin_noise_abs_max 0.3 \
+                               --out $outdir
 
 #                                --perlin_noise_abs_max 0.25 good \
 
@@ -160,9 +160,9 @@ python3 cancer-displacement.py --ref 2-T1c.nii.gz \
 #itksnap -g interp-neg-field.nii.gz &
 #itksnap -g interp-neg-field-${displacement}mm-ants.nii.gz &
 
-bash displace-3d.sh $displacement
+bash displace-3d.sh $outdir $displacement
 
-bash copy-to-client.sh $displacement
+bash copy-to-client.sh $outdir $displacement
 
 : '
 bash converttoantstransform.sh field.nii.gz field-ants.nii.gz
