@@ -15,6 +15,11 @@ mdir=$5
 mkdircmd="mkdir -p $mdir"
 eval $mkdircmd
 
+# Log the repository version
+echo "https://github.com/ivartz/cancer-sim/commits/master" > $mdir/cancer-sim-version.txt
+# shortened hash
+echo $(git log --pretty=format:'%h' -n 1) >> $mdir/cancer-sim-version.txt
+
 IFS="=" # Internal Field Separator, used for word splitting
 while read -r param values; do
     if [ $param == "displacement" ]; then        
