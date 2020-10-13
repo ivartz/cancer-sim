@@ -19,7 +19,7 @@ antsApplyTransforms --dimensionality 3 \
                     --output $resdir/warped.nii.gz \
                     --interpolation linear \
                     --transform $resdir/interp-field-${displacement}mm-ants.nii.gz \
-                    --verbose 1
+                    --verbose 0
 : '
 aliza 2-T1c.nii.gz \
       3-T1c.nii.gz \
