@@ -1223,6 +1223,7 @@ if __name__ == "__main__":
     # Stack together the coordinates of the points that were displaced to outside for the brain mask
     points_outside_mask = \
     np.stack((points_outside_mask_x, points_outside_mask_y, points_outside_mask_z), axis=0).any(axis=0)
+
     # Contiue working only with points and displacements that went outside of the brain mask
     mask_pts_went_outside = mask_pts[points_outside_mask]
     dinterpmask_went_outside = dinterpmask[points_outside_mask]
@@ -1242,27 +1243,29 @@ if __name__ == "__main__":
     points_outside_mask_x = ~np.isin(allpts_displacements_x.astype(np.int), mask_pts_x.astype(np.int))
     points_outside_mask_y = ~np.isin(allpts_displacements_y.astype(np.int), mask_pts_y.astype(np.int))
     points_outside_mask_z = ~np.isin(allpts_displacements_z.astype(np.int), mask_pts_z.astype(np.int))
-    #points_outside_mask = np.stack((points_outside_mask_x, points_outside_mask_y, points_outside_mask_z), axis=0).any(axis=0)
-    # Find the furthest candidate displacement that are still within the brain mask
-    # If no candadita displacement was found, the returned candidate displacement will be negative.
-    # Set these negative values to 0, indicating no displacement as the candidate displacement.
-    furthest_point_within_mask_x = np.argmax(points_outside_mask_x, axis=-1).astype(np.float32)-1
-    furthest_point_within_mask_x[furthest_point_within_mask_x < 0] = 0
-    furthest_point_within_mask_y = np.argmax(points_outside_mask_y, axis=-1).astype(np.float32)-1
-    furthest_point_within_mask_y[furthest_point_within_mask_y < 0] = 0
-    furthest_point_within_mask_z = np.argmax(points_outside_mask_z, axis=-1).astype(np.float32)-1
-    furthest_point_within_mask_z[furthest_point_within_mask_z < 0] = 0
-    # Stack together
-    furthest_point_within_mask = \
-    np.stack((furthest_point_within_mask_x, furthest_point_within_mask_y, furthest_point_within_mask_z), axis=-1)
-    # Actually find the furthest points displaced within the brain mask
-    furthest_point_within_mask = mask_pts_went_outside + dnorm_went_outside*furthest_point_within_mask
-    # Find the corresponding max displacement
-    dinterpmask_restricted = furthest_point_within_mask-mask_pts_went_outside
-    # Paste these new restricted displacement into the array of interpolated displacements
-    dinterpmask[points_outside_mask] = dinterpmask_restricted
-    dinterpmask[:,-1] *= -1 # NB! Invert operation 5 (invert z component back, for ANTs)
-    field_data_interp[brainmask_data == 1] = dinterpmask
+    # Continue only if some points actually went outside of the mask
+    if points_outside_mask_x.size: # Other coordinate components will follow
+        #points_outside_mask = np.stack((points_outside_mask_x, points_outside_mask_y, points_outside_mask_z), axis=0).any(axis=0)
+        # Find the furthest candidate displacement that are still within the brain mask
+        # If no candadita displacement was found, the returned candidate displacement will be negative.
+        # Set these negative values to 0, indicating no displacement as the candidate displacement.
+        furthest_point_within_mask_x = np.argmax(points_outside_mask_x, axis=-1).astype(np.float32)-1
+        furthest_point_within_mask_x[furthest_point_within_mask_x < 0] = 0
+        furthest_point_within_mask_y = np.argmax(points_outside_mask_y, axis=-1).astype(np.float32)-1
+        furthest_point_within_mask_y[furthest_point_within_mask_y < 0] = 0
+        furthest_point_within_mask_z = np.argmax(points_outside_mask_z, axis=-1).astype(np.float32)-1
+        furthest_point_within_mask_z[furthest_point_within_mask_z < 0] = 0
+        # Stack together
+        furthest_point_within_mask = \
+        np.stack((furthest_point_within_mask_x, furthest_point_within_mask_y, furthest_point_within_mask_z), axis=-1)
+        # Actually find the furthest points displaced within the brain mask
+        furthest_point_within_mask = mask_pts_went_outside + dnorm_went_outside*furthest_point_within_mask
+        # Find the corresponding max displacement
+        dinterpmask_restricted = furthest_point_within_mask-mask_pts_went_outside
+        # Paste these new restricted displacement into the array of interpolated displacements
+        dinterpmask[points_outside_mask] = dinterpmask_restricted
+        dinterpmask[:,-1] *= -1 # NB! Invert operation 5 (invert z component back, for ANTs)
+        field_data_interp[brainmask_data == 1] = dinterpmask
     #"""
     
     # Save original (non-intepolated) field
