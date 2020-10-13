@@ -141,7 +141,7 @@ python3 cancer-displacement.py --ref 2-T1c.nii.gz \
                                --brainmask 2-BrainExtractionMask.nii.gz \
                                --displacement $displacement \
                                --gaussian_range_one_sided 6 \
-                               --max_radial_displacement_to_brainmask_fraction 1 \
+                               --max_radial_displacement_to_brainmask_fraction 0.5 \
                                --max_radial_displacement_to_outer_ellipsoid_mask_fraction 1 \
                                --num_vecs 64 \
                                --angle_thr 7 \
@@ -149,8 +149,9 @@ python3 cancer-displacement.py --ref 2-T1c.nii.gz \
                                --spline_order 1 \
                                --smoothing_std 4 \
                                --perlin_noise_res 0.08 \
-                               --perlin_noise_abs_max 0.3 \
-                               --out $outdir
+                               --perlin_noise_abs_max 1 \
+                               --out $outdir \
+                               --verbose 0
 
 #                                --perlin_noise_abs_max 0.25 good \
 

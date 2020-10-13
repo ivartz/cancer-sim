@@ -8,6 +8,8 @@ import gc
 import time
 # Perlin noise library: https://github.com/pvigier/perlin-numpy
 from perlin_numpy import generate_perlin_noise_3d#, generate_perlin_noise_3d
+import warnings
+warnings.filterwarnings("ignore")
 
 def max_spread_vectors_subset(vectors, positions, num_vecs=100):
     """
@@ -318,8 +320,14 @@ if __name__ == "__main__":
       type=str,
       default=["results"],
     )
+    CLI.add_argument(
+      "--verbose",
+      help="Print all messages",
+      type=int,
+      default=1,
+    )
     args = CLI.parse_args()
-    
+        
     # Store start time for the script
     script_start_time = time.time()
     
@@ -523,12 +531,20 @@ if __name__ == "__main__":
     #bm = np.zeros(ref_img.shape+(num_normal_displacement_vectors,), dtype=np.bool) # TODO
     bm = np.zeros(ref_img.shape+(num_normal_displacement_vectors,), dtype=np.int)# np.int fastest?
     
+    print("Processing splits")
+    
+    # Setup progress bar
+    sys.stdout.write("[%s]" % (" " * (num_splits+1)))
+    sys.stdout.flush()
+    sys.stdout.write("\b" * (num_splits+2)) # return to start of line, after '['
+    
     # Start timer to measure the time used on the for loop and remaining vectors
     start_time = time.time()
     
     # Iterate over even batches of the normal vectors
     for split_num, v in enumerate(np.split(normal_displacement_vectors_to_split, num_splits)):
-        print("Processing split %i/%i" % (split_num+1, num_splits))
+        if args.verbose == 1:
+            print("Processing split %i/%i" % (split_num+1, num_splits))
         # Calculate the dot product between the field vectors and the normal vectors
         d = np.dot(field_data, v.T)
         # The product of the norms of the field vectors and normal vectors
@@ -542,10 +558,15 @@ if __name__ == "__main__":
         # Save the boolean mask as a binary mask in existing array
         # NB! Using binary dilation with default structuring element
         bm[...,split_num*split_size:(split_num+1)*split_size][m] = 1
-        print("Calculated directional masks")
+        if args.verbose == 1:
+            print("Calculated directional masks")
+        # Append to progress bar
+        sys.stdout.write("-")
+        sys.stdout.flush()
     # Iterate over the remaining normal vectors if existing
     if remaining:
-        print("Processing remainder")
+        if args.verbose == 1:
+            print("Processing remainder")
         # Calculate the dot product between the field vectors and the normal vectors
         d = np.dot(field_data, normal_displacement_vectors_remaining.T)
         # The product of the norms of the field vectors and normal vectors
@@ -559,7 +580,13 @@ if __name__ == "__main__":
         # Save the boolean mask as a binary mask in existing array
         # NB! Using binary dilation with default structuring element
         bm[...,-remaining:][m] = 1
-        print("Calculated remaining directional masks")
+        if args.verbose == 1:
+            print("Calculated remaining directional masks")
+        # Append to progress bar
+        sys.stdout.write("-")
+        sys.stdout.flush()
+    
+    sys.stdout.write("]\n") # this ends the progress bar
     
     print("Cone computation execution time: %f s" %(time.time()-start_time))
 
@@ -601,6 +628,13 @@ if __name__ == "__main__":
     # scalar fields
     print("Splitting non-intepolated vector field array into three scalar arrays")
     dx, dy, dz = field_data[...,0], field_data[...,1], field_data[...,2]
+
+    print("Processing vectors")
+    
+    # Setup progress bar
+    sys.stdout.write("[%s]" % (" " * num_normal_displacement_vectors))
+    sys.stdout.flush()
+    sys.stdout.write("\b" * (num_normal_displacement_vectors+1)) # return to start of line, after '['
     
     # Start timer to measure the time used on the for loop
     start_time = time.time()
@@ -608,11 +642,13 @@ if __name__ == "__main__":
     # directional binary masks for
     #for i in range(2, num_normal_displacement_vectors-1): # when num_vecs = 4 (for debug)
     for i in range(num_normal_displacement_vectors):
-        print("Processing vector: %i/%i" % (i+1, num_normal_displacement_vectors))
+        if args.verbose == 1:
+            print("Processing vector: %i/%i" % (i+1, num_normal_displacement_vectors))
         # Get the coordinates of the normal vector
         nv_c = normal_displacement_vectors_coordinates[i]
-        print("Position: ", end='')
-        print(nv_c)
+        if args.verbose == 1:
+            print("Position: ", end='')
+            print(nv_c)
         # Get the normal vector
         nv_d = normal_displacement_vectors[i]
         nv_d[-1] *= -1 # Invert z component. This was necesary in order to 
@@ -623,8 +659,9 @@ if __name__ == "__main__":
         # Normalize the normal vector, to be ensure that it has exactly unit length
         nv_d = nv_d/np.linalg.norm(nv_d)
         
-        print("Displacement: ", end='')
-        print(nv_d)
+        if args.verbose == 1:
+            print("Displacement: ", end='')
+            print(nv_d)
         # Get the directional binary mask corresponding to this
         # normal vector
         bmi = bm[...,i]
@@ -649,11 +686,13 @@ if __name__ == "__main__":
             p = (nv_c + n*nv_d).astype(np.int)
         # The maximum displaced coordinates was found
         p_max_bmi = (nv_c + (n-1)*nv_d).astype(np.int)
-        print("Max displaced coordinates within original directional mask: ", end='')
-        print(p_max_bmi)
+        if args.verbose == 1:
+            print("Max displaced coordinates within original directional mask: ", end='')
+            print(p_max_bmi)
         # Calculate the magnitude of the maximum displacement
         disp_max_bmi = np.linalg.norm((p_max_bmi-nv_c).astype(np.float32))
-        print("Max displacement within original directional mask along vector: %f" % disp_max_bmi)
+        if args.verbose == 1:
+            print("Max displacement within original directional mask along vector: %f" % disp_max_bmi)
         
         # Find the maximum displacement possible along the nv_d vector 
         # between its starting position and the end of the brain mask
@@ -669,23 +708,28 @@ if __name__ == "__main__":
             p = (nv_c + n*nv_d).astype(np.int)
         # The maximum displaced coordinates was found
         p_max_brain = (nv_c + (n-1)*nv_d).astype(np.int)
-        print("Max displaced coordinates within brain mask: ", end='')
-        print(p_max_brain)
+        if args.verbose == 1:
+            print("Max displaced coordinates within brain mask: ", end='')
+            print(p_max_brain)
         # Calculate the magnitude of the maximum displacement
         disp_max_brain = np.linalg.norm((p_max_brain-nv_c).astype(np.float32))
-        print("Max displacement within brain mask along vector: %f" % disp_max_brain)
+        if args.verbose == 1:
+            print("Max displacement within brain mask along vector: %f" % disp_max_brain)
         
         # Scale the extent (by fraction) of the displacements reaching the end of the brain mask
         disp_max_brain = args.max_radial_displacement_to_brainmask_fraction*disp_max_brain
-        print("Scaled max displacement within brain mask along vector: %f" % disp_max_brain)
+        if args.verbose == 1:
+            print("Scaled max displacement within brain mask along vector: %f" % disp_max_brain)
         
         p_max_brain = (nv_c + disp_max_brain*nv_d).astype(np.int)
-        print("Scaled max displaced coordinates within brain mask: ", end='')
-        print(p_max_brain)
+        if args.verbose == 1:
+            print("Scaled max displaced coordinates within brain mask: ", end='')
+            print(p_max_brain)
         
         # Find the geometric center of the directional
         # binary mask BEFORE interpolation
-        print("Finding bounding box for binary dilated original directional mask")
+        if args.verbose == 1:
+            print("Finding bounding box for binary dilated original directional mask")
         bm_geom_center, bm_widths = bounding_box_mask(binary_dilation(bmi)) # NB! Binary dilation is performed to ensure complete coverage of the field
         bmcx, bmcy, bmcz = bm_geom_center
         bmwx, bmwy, bmwz = bm_widths
@@ -724,7 +768,8 @@ if __name__ == "__main__":
         #print("Finding bounding box for directional mask with maximum displaced position added")
         # Not used end
         
-        print("Extending directional mask")
+        if args.verbose == 1:
+            print("Extending directional mask")
         
         # Find bounding box for interpolation
         # Get all the positions within the original directionary mask
@@ -758,11 +803,13 @@ if __name__ == "__main__":
         
         # Fill in the points of the diplaced binary mask. TODO: improve speed if found slow
         #bmi[tuple(np.unique(mask_pts.astype(np.int), axis=0))] = 1
-        print("Storing displaced positions for extended directional binary mask")
+        if args.verbose == 1:
+            print("Storing displaced positions for extended directional binary mask")
         for tofilli in np.unique(mask_pts.astype(np.int), axis=0):
             xp, yp, zp = tofilli[0], tofilli[1], tofilli[2]
             if xp < 0 or yp < 0 or zp < 0:
-                print("Negative index of stretched binary mask, Skipping")
+                if args.verbose == 1:
+                    print("Negative index of stretched binary mask, Skipping")
                 print(xp)
                 print(yp)
                 print(zp)
@@ -771,13 +818,15 @@ if __name__ == "__main__":
                 bmi[xp, yp, zp] = 1
         
         # Now the new bounding box can be found
-        print("Finding bounding box for binary dilated extended directional mask")
+        if args.verbose == 1:
+            print("Finding bounding box for binary dilated extended directional mask")
         bm_geom_center_interp, bm_widths_interp = bounding_box_mask(binary_dilation(bmi)) # NB! Binary dilation is performed to ensure complete coverage of the field
         bmcx_interp, bmcy_interp, bmcz_interp = bm_geom_center_interp
         bmwx_interp, bmwy_interp, bmwz_interp = bm_widths_interp
         
         # For diagnostics, store old and intepolated (stretched) bounding box
-        print("Storing original and extended bounding boxes")
+        if args.verbose == 1:
+            print("Storing original and extended bounding boxes")
         orig_bboxes_data[bmcx-bmwx//2:bmcx+bmwx//2, \
                          bmcy-bmwy//2:bmcy+bmwy//2, \
                          bmcz-bmwz//2:bmcz+bmwz//2, \
@@ -802,13 +851,15 @@ if __name__ == "__main__":
             p = (nv_c + n*nv_d).astype(np.int)
         # The maximum displaced coordinates was found
         p_max_oel = (nv_c + (n-1)*nv_d).astype(np.int)
-        print("Max displaced coordinates within outer ellipsoid mask: ", end='')
-        print(p_max_oel)
+        if args.verbose == 1:
+            print("Max displaced coordinates within outer ellipsoid mask: ", end='')
+            print(p_max_oel)
         
         # Calculate the absolute max difference between p_max_oel and nv_c
         diff_max_oel_abs = np.abs((p_max_oel-nv_c).astype(np.float32))
-        print("Absolute max difference between intersection of vector on outer ellipsoid mask surface, and vector position: " , end='')
-        print(diff_max_oel_abs)
+        if args.verbose == 1:
+            print("Absolute max difference between intersection of vector on outer ellipsoid mask surface, and vector position: " , end='')
+            print(diff_max_oel_abs)
         
         # Extract the components of the vector position (inflection point)
         nv_cx, nv_cy, nv_cz = nv_c
@@ -873,20 +924,25 @@ if __name__ == "__main__":
         #                      bmcz-bmwz//2:bmcz:bmwz_interp*1j]
         
         # Interpolate
-        print("Interpolating x displacement")
+        if args.verbose == 1:
+            print("Interpolating x displacement")
         dxi = map_coordinates(dx, [xi.ravel(), yi.ravel(), zi.ravel()], order=args.spline_order)\
                                  .reshape(bmwx_interp, bmwy_interp, bmwz_interp)
-        print("Interpolating y displacement")
+        if args.verbose == 1:
+            print("Interpolating y displacement")
         dyi = map_coordinates(dy, [xi.ravel(), yi.ravel(), zi.ravel()], order=args.spline_order)\
                                  .reshape(bmwx_interp, bmwy_interp, bmwz_interp)
-        print("Interpolating z displacement")
+        if args.verbose == 1:
+            print("Interpolating z displacement")
         dzi = map_coordinates(dz, [xi.ravel(), yi.ravel(), zi.ravel()], order=args.spline_order)\
                                  .reshape(bmwx_interp, bmwy_interp, bmwz_interp)
-        print("Interpolating Gaussian")
+        if args.verbose == 1:
+            print("Interpolating Gaussian")
         gaussian_data_interp_part = map_coordinates(gaussian_data, [xi.ravel(), yi.ravel(), zi.ravel()], order=args.spline_order)\
                                                                   .reshape(bmwx_interp, bmwy_interp, bmwz_interp)
         
-        print("Inserting interpolated displacements and Gaussian into existing arrays")
+        if args.verbose == 1:
+            print("Inserting interpolated displacements and Gaussian into existing arrays")
         field_data_interp[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
                           bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
                           bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
@@ -903,7 +959,8 @@ if __name__ == "__main__":
                              bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
                              bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
                              i] = gaussian_data_interp_part
-        print("Inserting done")
+        if args.verbose == 1:
+            print("Inserting done")
         """
         print("Scalig interpolated displacements and Gaussian using dot products") # TODO: This resulted in triangle shaped displacements
         # Invert operation 6
@@ -937,6 +994,11 @@ if __name__ == "__main__":
         gc.collect()
         print("Garbage collect done")
         """
+        # Append to progress bar
+        sys.stdout.write("-")
+        sys.stdout.flush()
+    
+    sys.stdout.write("]\n") # this ends the progress bar
     
     print("Interpolation execution time: %f s" %(time.time()-start_time))
     
