@@ -8,4 +8,4 @@ num_splits=4
 spline_order=1
 smoothing_std=4
 perlin_noise_res=0.08
-perlin_noise_abs_max=0
+perlin_noise_abs_max=0.1

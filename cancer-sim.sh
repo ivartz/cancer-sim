@@ -16,6 +16,19 @@ pres=${13}
 pabs=${14}
 odir=${15}
 
+# Store the parameters used
+echo "displacement=$disp" > $odir/params.txt
+echo "gaussian_range_one_sided=$grange" >> $odir/params.txt
+echo "max_radial_displacement_to_brainmask_fraction=$mradb" >> $odir/params.txt
+echo "max_radial_displacement_to_outer_ellipsoid_mask_fraction=$mrade" >> $odir/params.txt
+echo "num_vecs=$vecs" >> $odir/params.txt
+echo "angle_thr=$angle" >> $odir/params.txt
+echo "num_splits=$splits" >> $odir/params.txt
+echo "spline_order=$splo" >> $odir/params.txt
+echo "smoothing_std=$sm" >> $odir/params.txt
+echo "perlin_noise_res=$pres" >> $odir/params.txt
+echo "perlin_noise_abs_max=$pabs" >> $odir/params.txt
+
 python3 cancer-displacement.py --ref $ref \
                                --tumormask $tmask \
                                --brainmask $bmask \
@@ -35,4 +48,4 @@ python3 cancer-displacement.py --ref $ref \
 
 bash displace-3d.sh $odir $disp
 
-bash copy-to-client.sh $odir $disp
+#bash copy-to-client.sh $odir $disp

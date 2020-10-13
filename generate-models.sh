@@ -103,7 +103,10 @@ for disp in ${displacement[*]}; do
                                             ofname=$(printf %04d $idx)
                                             #printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs
                                             #printf "%s %s %s %s %s %s %s %s %s %s %s %s\n" $idx $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs
-
+                                            
+                                            # Create output folder
+                                            mkdir -p $mdir/$ofname
+                                            
                                             runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
                                             echo $runcmd
                                             eval $runcmd
@@ -120,3 +123,5 @@ for disp in ${displacement[*]}; do
         done
     done
 done
+
+echo "All models generated"
