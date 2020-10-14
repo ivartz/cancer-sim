@@ -3,7 +3,7 @@ bash generate-models.sh <param-space.txt> <ref> <tumormask> <brainmask> <mdir>
 
 ,for instance:
 
-bash generate-models.sh parameter-space.txt 2-T1c.nii.gz 2-Tumormask.nii.gz 2-BrainExtractionMask.nii.gz /mnt/HDD3TB/derivatives/cancer-sim 2>&1 | tee /mnt/HDD3TB/derivatives/cancer-sim/runlog.txt
+bash generate-models.sh params.txt 2-T1c.nii.gz 2-Tumormask.nii.gz 2-BrainExtractionMask.nii.gz /mnt/HDD3TB/derivatives/cancer-sim-1 2>&1 | tee /mnt/HDD3TB/derivatives/cancer-sim-1/runlog.txt
 '
 params=$1
 ref=$2
@@ -53,8 +53,11 @@ done < $params # < creates input stream from file
 verbose=0
 idx=1
 
-#printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "idx" "disp" "grange" "mradb" "mrade" "vecs" "angle" "splits" "splo" "sm" "pres" "pabs"
-#printf "%s %s %s %s %s %s %s %s %s %s %s %s\n" "idx" "disp" "grange" "mradb" "mrade" "vecs" "angle" "splits" "splo" "sm" "pres" "pabs"
+# Store the parameter space file in generated dataset
+cp $params $mdir
+
+# Start of file for saving model parameters
+echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "idx" "disp" "grange" "mradb" "mrade" "vecs" "angle" "splits" "splo" "sm" "pres" "pabs") > $mdir/params-all.txt
 
 for disp in ${displacement[*]}; do
     if [ $verbose == 1 ]; then
@@ -92,28 +95,55 @@ for disp in ${displacement[*]}; do
                                     if [ $verbose == 1 ]; then
                                         echo "9"
                                     fi
-                                    for pres in ${perlin_noise_res[*]}; do
+                                    if [ ${#perlin_noise_abs_max[*]} == 1 ] && [ ${perlin_noise_abs_max[0]} == 0 ]; then
+                                        # Skipping all combinations of perlin_noise_res
+                                        # since perlin_noise_abs_max is 0 and have a length of 1
                                         if [ $verbose == 1 ]; then
                                             echo "10"
                                         fi
-                                        for pabs in ${perlin_noise_abs_max[*]}; do
+                                        ofname=$(printf %04d $idx)
+                                        
+                                        # Set parameters
+                                        pres=${perlin_noise_res[0]}
+                                        pabs=0
+                                        
+                                        # Save model parameters
+                                        echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs) >> $mdir/params-all.txt
+                                        
+                                        # Create output folder
+                                        mkdir -p $mdir/$ofname
+                                        
+                                        runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
+                                        echo $runcmd
+                                        eval $runcmd
+                                        
+                                        idx=$((idx+1))
+                                    else
+                                        # More combinations
+                                        for pres in ${perlin_noise_res[*]}; do
                                             if [ $verbose == 1 ]; then
-                                                echo "11"
+                                                echo "10"
                                             fi
-                                            ofname=$(printf %04d $idx)
-                                            #printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs
-                                            #printf "%s %s %s %s %s %s %s %s %s %s %s %s\n" $idx $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs
-                                            
-                                            # Create output folder
-                                            mkdir -p $mdir/$ofname
-                                            
-                                            runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
-                                            echo $runcmd
-                                            eval $runcmd
-                                            
-                                            idx=$((idx+1))
+                                            for pabs in ${perlin_noise_abs_max[*]}; do
+                                                if [ $verbose == 1 ]; then
+                                                    echo "11"
+                                                fi
+                                                ofname=$(printf %04d $idx)
+                                                
+                                                # Save model parameters
+                                                echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs) >> $mdir/params-all.txt
+                                                
+                                                # Create output folder
+                                                mkdir -p $mdir/$ofname
+                                                
+                                                runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
+                                                echo $runcmd
+                                                eval $runcmd
+                                                
+                                                idx=$((idx+1))
+                                            done
                                         done
-                                    done
+                                    fi
                                 done
                             done
                         done
