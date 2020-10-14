@@ -1,5 +1,5 @@
-displacement=4 7 10
-gaussian_range_one_sided=5 8
+displacement=4 6
+gaussian_range_one_sided=8 9
 max_radial_displacement_to_brainmask_fraction=1
 max_radial_displacement_to_outer_ellipsoid_mask_fraction=1
 num_vecs=64
@@ -7,5 +7,5 @@ angle_thr=7
 num_splits=4
 spline_order=1
 smoothing_std=4
-perlin_noise_res=0.08 0.2
+perlin_noise_res=0.08 0.1
 perlin_noise_abs_max=0.5

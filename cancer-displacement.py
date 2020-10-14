@@ -810,9 +810,9 @@ if __name__ == "__main__":
             if xp < 0 or yp < 0 or zp < 0:
                 if args.verbose == 1:
                     print("Negative index of stretched binary mask, Skipping")
-                print(xp)
-                print(yp)
-                print(zp)
+                    print(xp)
+                    print(yp)
+                    print(zp)
             #if xp >= 0 and xp < xsize and yp >= 0 and yp < ysize and zp >= 0 and zp < zsize:
             elif xp < xsize and yp < ysize and zp < zsize and brainmask_data[xp,yp,zp] != 0:
                 bmi[xp, yp, zp] = 1
