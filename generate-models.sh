@@ -56,6 +56,13 @@ idx=1
 # Store the parameter space file in generated dataset
 cp $params $mdir
 
+# Store expected number of combinations to file
+if [ ${#perlin_noise_abs_max[*]} == 1 ] && [ ${perlin_noise_abs_max[0]} == 0 ]; then
+    echo "$((${#displacement[*]}*${#gaussian_range_one_sided[*]}*${#brain_coverage_fraction[*]}*${#intensity_decay_fraction[*]}*${#num_vecs[*]}*${#angle_thr[*]}*${#num_splits[*]}*${#spline_order[*]}*${#smoothing_std[*]}))" > $mdir/expected-num-models.txt
+else
+    echo "$((${#displacement[*]}*${#gaussian_range_one_sided[*]}*${#brain_coverage_fraction[*]}*${#intensity_decay_fraction[*]}*${#num_vecs[*]}*${#angle_thr[*]}*${#num_splits[*]}*${#spline_order[*]}*${#smoothing_std[*]}*${#perlin_noise_res[*]}*${#perlin_noise_abs_max[*]}))" > $mdir/expected-num-models.txt
+fi
+
 # Start of file for saving model parameters
 echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "idx" "disp" "grange" "bcf" "idf" "vecs" "angle" "splits" "splo" "sm" "pres" "pabs") > $mdir/params-all.txt
 
