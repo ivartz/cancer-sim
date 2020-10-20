@@ -133,13 +133,13 @@ if __name__ == "__main__":
     )
     CLI.add_argument(
       "--displacement",
-      help="The maximum amount of radial displacement (in isotropic units according to --ref) to add",
+      help="<0,large] [mm]. The maximum amount of radial displacement (in isotropic units according to --ref) to add",
       type=float,
       default=1,
     )
     CLI.add_argument(
       "--gaussian_range_one_sided",
-      help="The one-sided range x used for x=[-x,x] on a normal (gaussian) symmetric distribution to model tumor expansion",
+      help="[5,8] for working conditions. The one-sided range x used for x=[-x,x] on a normal (gaussian) symmetric distribution to model tumor expansion",
       type=float,
       default=5,
     )
@@ -188,13 +188,13 @@ if __name__ == "__main__":
     CLI.add_argument(
       "--perlin_noise_res",
       #help="If Gaussian noise used, standard deviation (mean=0); if perlin noise; number of periods of noise to generate along each axis (mean ~0). The noise is added to the final intepolated Gaussian and x, y and z displacement (before scaling displacements to specified max displacement, and before scaling displacements that went oustide of the brain)",
-      help="The number of periods of noise to generate along each axis for Perlin noise. The noise is added to the final intepolated Gaussian and x, y and z displacement (before scaling displacements to specified max displacement, and before scaling displacements that went oustide of the brain)",
+      help="<0,1]. The number of periods of noise to generate along each axis for Perlin noise. The noise is added to the final intepolated Gaussian and x, y and z displacement (before scaling displacements to specified max displacement, and before scaling displacements that went oustide of the brain)",
       type=float,
       default=0.1,
     )    
     CLI.add_argument(
       "--perlin_noise_abs_max",
-      help="The absolute value of maximum Perlin noise to add. The noise is added to the final intepolated Gaussian and x, y and z displacement (before scaling displacements to specified max displacement, and before scaling displacements that went oustide of the brain)",
+      help="[0,1]. The absolute value of maximum Perlin noise to add. The noise is added to the final intepolated Gaussian and x, y and z displacement (before scaling displacements to specified max displacement, and before scaling displacements that went oustide of the brain)",
       type=float,
       default=0.05,
     )    
