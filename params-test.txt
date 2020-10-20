@@ -1,7 +1,7 @@
-displacement=10
-gaussian_range_one_sided=8 10
-max_radial_displacement_to_brainmask_fraction=1
-max_radial_displacement_to_outer_ellipsoid_mask_fraction=1
+displacement=4
+gaussian_range_one_sided=5
+brain_coverage_fraction=1
+intensity_decay_fraction=0
 num_vecs=64
 angle_thr=7
 num_splits=4

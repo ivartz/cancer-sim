@@ -1,12 +1,12 @@
-#bash cancer-sim <ref> <tumormask> <brainmask> <disp> <grange> <mradb> <mrade> <vecs> <angle> <splits> <splo> <sm> <pres> <pabs> <odir>
+#bash cancer-sim <ref> <tumormask> <brainmask> <disp> <grange> <bcf> <icf> <vecs> <angle> <splits> <splo> <sm> <pres> <pabs> <odir>
 
 ref=$1
 tmask=$2
 bmask=$3
 disp=$4
 grange=$5
-mradb=$6
-mrade=$7
+bcf=$6
+idf=$7
 vecs=$8
 angle=$9
 splits=${10}
@@ -19,8 +19,8 @@ odir=${15}
 # Store the parameters used
 echo "displacement=$disp" > $odir/params.txt
 echo "gaussian_range_one_sided=$grange" >> $odir/params.txt
-echo "max_radial_displacement_to_brainmask_fraction=$mradb" >> $odir/params.txt
-echo "max_radial_displacement_to_outer_ellipsoid_mask_fraction=$mrade" >> $odir/params.txt
+echo "brain_coverage_fraction=$bcf" >> $odir/params.txt
+echo "intensity_decay_fraction=$idf" >> $odir/params.txt
 echo "num_vecs=$vecs" >> $odir/params.txt
 echo "angle_thr=$angle" >> $odir/params.txt
 echo "num_splits=$splits" >> $odir/params.txt
@@ -34,8 +34,8 @@ python3 cancer-displacement.py --ref $ref \
                                --brainmask $bmask \
                                --displacement $disp \
                                --gaussian_range_one_sided $grange \
-                               --max_radial_displacement_to_brainmask_fraction $mradb \
-                               --max_radial_displacement_to_outer_ellipsoid_mask_fraction $mrade \
+                               --brain_coverage_fraction $bcf \
+                               --intensity_decay_fraction $idf \
                                --num_vecs $vecs \
                                --angle_thr $angle \
                                --num_splits $splits \

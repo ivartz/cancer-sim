@@ -11,57 +11,15 @@ from perlin_numpy import generate_perlin_noise_3d#, generate_perlin_noise_3d
 import warnings
 warnings.filterwarnings("ignore")
 
-def max_spread_vectors_subset(vectors, positions, num_vecs=100):
-    """
-    voptx, vopty, voptz = -1, 0, 0
-    largestdiffx = -2
-    largestdiffy = -2
-    largestdiffz = -2
-    for i, v in enumerate(vectors):
-        vx, vy, vz = v
-        if vx-voptx > largestdiffx and vy-vopty > largestdiffy and vz-voptz > largestdiffz:
-            vcandx = vx
-            vcandy = vy
-            vcandz = vz
-            icand = i
-            smallestdiffx = vx-voptx
-            smallestdiffy = vy-vopty
-            smallestdiffz = vz-voptz
-    #print(smallestdiffx)
-    #print(smallestdiffy)
-    #print(smallestdiffz)
-    seli = np.array([icand])
-    vectors_sel = np.array([vcandx, vcandy, vcandz]).reshape(1, 3)
-    positions_sel = positions[seli]
-    #print(seli)
-    #print(vectors_sel)
-    #print(positions_sel)
-    #sys.exit()
-    """
+def max_spread_vectors_subset(vectors, positions, num_vecs=64):
     # Select a first vector and its position as the first
     # of the num_vecs selected vectors
-    #randi = np.random.choice(len(vectors), 1)
-    #"""
     seli = np.array([0])
     vectors_sel = vectors[seli]
     positions_sel = positions[seli]
-    #"""
-    #vectors_sel = vectors[randi]
-    #positions_sel = positions[randi] # TODO
-    #vectors_sel = np.array([-0.3057756, -0.6702055, -0.6794647], dtype=np.float32).reshape(1, 3) # TODO debug
-    #positions_sel = np.array([43, 106,  64], dtype=np.int).reshape(1, 3)
-    """
-    print("Selected vector and position")
-    print(vectors_sel.shape)
-    print(vectors_sel)
-    print(positions_sel.shape)
-    print(positions_sel)
-    """
     # Delete selected vector and position from array
     vectors = np.delete(vectors, seli, axis=0)
     positions = np.delete(positions, seli, axis=0)
-    #vectors = np.delete(vectors, randi, axis=0) # TODO
-    #positions = np.delete(positions, randi, axis=0)
     # Find the other vectors
     for i in range(1, num_vecs):
         # Find the next vector based on the maximum of mean of norms
@@ -77,7 +35,6 @@ def max_spread_vectors_subset(vectors, positions, num_vecs=100):
         maxi = np.nanargmax(mean_norms)
         v = vectors[maxi]
         p = positions[maxi]
-        #print("Selected vector and position %i/%i" % (i+1,num_vecs))
         # Store selected vector and its position
         vectors_sel = np.append(vectors_sel, [v], axis=0)
         positions_sel = np.append(positions_sel, [p], axis=0)
@@ -89,103 +46,45 @@ def max_spread_vectors_subset(vectors, positions, num_vecs=100):
 def gaussian_norm(x):
     return np.exp(-(x**2)/2)
 
-def flatten_tensor(T):
-    """
-    Flattens the M x N x ..., x D tensor T while preserving 
-    original indices to the output shape (MxNx...xD, F, M, N, ..., D)
-    where F is a vector of the values in T, and M, N, ..., D vectors of 
-    original indices along their dimension in T (for the values in F).
-    https://stackoverflow.com/questions/46135070/generalise-slicing-operation-in-a-numpy-array/46135084#46135084
-    """
-    n = T.ndim
-    grid = np.ogrid[tuple(map(slice, T.shape))]
-    out = np.empty(T.shape + (n+1,), dtype=T.dtype)
-    for i in range(n):
-        out[...,i+1] = grid[i]
-    out[...,0] = T
-    out.shape = (-1,n+1)
-    return out
-
-def angle_between(v1, v2):
-    dot_pr = v1.dot(v2)
-    norms = np.linalg.norm(v1) * np.linalg.norm(v2)
- 
-    return np.rad2deg(np.arccos(dot_pr / norms))    
-
-def bounding_box_mask1(mask):
-    """
-    Returns the coodinates for the geometric center
-    as well as x, y, and z widths of a binary mask,
-    adjusted to an even number
-    """
-    mask_flat = flatten_tensor(mask)
-    # Extract tumor
-    mask_flat = mask_flat[mask_flat[:,0] == 1]
-    x, y, z = mask_flat[:,1], mask_flat[:,2], mask_flat[:,3]
-    #z, y, x = mask_flat[:,1], mask_flat[:,2], mask_flat[:,3]
-    xmin, ymin, zmin = np.min(x), np.min(y), np.min(z)
-    xmax, ymax, zmax = np.max(x), np.max(y), np.max(z)
-    """
-    np.savez("mask.npz", mask)
-
-    print("Look here start!")
-    
-    print("xmin: %i" % xmin)
-    print("ymin: %i" % ymin)
-    print("zmin: %i" % zmin)
-    
-    print("----")
-    
-    print("xmax: %i" % xmax)
-    print("ymax: %i" % ymax)
-    print("zmax: %i" % zmax)
-    
-    print("Look here end!")
-    sys.exit()
-    """
-    wx = xmax-xmin
-    wy = ymax-ymin
-    wz = zmax-zmin
-    # If the widths are odd, add 1 to make them even
-    if wx % 2:
-        wx += 1
-    if wy % 2:
-        wy += 1
-    if wz % 2:
-        wz += 1
-    cx = xmin + wx/2
-    cy = ymin + wy/2
-    cz = zmin + wz/2
-    return (np.int(cx), np.int(cy), np.int(cz)), (np.int(wx), np.int(wy), np.int(wz))
-
 def bounding_box_mask(mask):
     """
     Returns the coodinates for the geometric center
     as well as x, y, and z widths of a binary mask,
     adjusted to an even number
     """
+    
+    """
     # Nonzero version, interpolation execution time: 11.519090 s
-    #x_nonzeros = np.nonzero(np.sum(mask, axis=(1,2)))[0]
-    #y_nonzeros = np.nonzero(np.sum(mask, axis=(0,2)))[0]
-    #z_nonzeros = np.nonzero(np.sum(mask, axis=(0,1)))[0]
+    x_nonzeros = np.nonzero(np.sum(mask, axis=(1,2)))[0]
+    y_nonzeros = np.nonzero(np.sum(mask, axis=(0,2)))[0]
+    z_nonzeros = np.nonzero(np.sum(mask, axis=(0,1)))[0]
+    x_min, x_max = x_nonzeros[0], x_nonzeros[-1]
+    y_min, y_max = y_nonzeros[0], y_nonzeros[-1]
+    z_min, z_max = z_nonzeros[0], z_nonzeros[-1]
+    """
+    
+    """
     # Argwhere version 1, interpolation execution time: 10.904181 s
-    #x_nonzeros = np.argwhere(np.sum(mask, axis=(1,2))).squeeze()
-    #y_nonzeros = np.argwhere(np.sum(mask, axis=(0,2))).squeeze()
-    #z_nonzeros = np.argwhere(np.sum(mask, axis=(0,1))).squeeze()
+    x_nonzeros = np.argwhere(np.sum(mask, axis=(1,2))).squeeze()
+    y_nonzeros = np.argwhere(np.sum(mask, axis=(0,2))).squeeze()
+    z_nonzeros = np.argwhere(np.sum(mask, axis=(0,1))).squeeze()
+    x_min, x_max = x_nonzeros[0], x_nonzeros[-1]
+    y_min, y_max = y_nonzeros[0], y_nonzeros[-1]
+    z_min, z_max = z_nonzeros[0], z_nonzeros[-1]
+    """
     
     """
     # Argwhere version 2, interpolation execution time: 10.689049 s BEST SO FAR
     x_nonzeros = np.argwhere(np.sum(mask, axis=(1,2)))[:,0]
     y_nonzeros = np.argwhere(np.sum(mask, axis=(0,2)))[:,0]
     z_nonzeros = np.argwhere(np.sum(mask, axis=(0,1)))[:,0]
-    
-    #
     x_min, x_max = x_nonzeros[0], x_nonzeros[-1]
     y_min, y_max = y_nonzeros[0], y_nonzeros[-1]
     z_min, z_max = z_nonzeros[0], z_nonzeros[-1]
     """
     
-    # Sum and arange version
+    #"""
+    # Sum and arange version. I think this is the fastest
     m1, m2, m3 = np.sum(mask, axis=(1,2)), np.sum(mask, axis=(0,2)), np.sum(mask, axis=(0,1))
     x_nonzeros = np.arange(m1.shape[0])[m1>0]
     y_nonzeros = np.arange(m2.shape[0])[m2>0]
@@ -193,28 +92,13 @@ def bounding_box_mask(mask):
     x_min, x_max = x_nonzeros[[0, -1]]
     y_min, y_max = y_nonzeros[[0, -1]]
     z_min, z_max = z_nonzeros[[0, -1]]
+    #"""
     
-    """
-    print(mask)
-    np.savez("mask.npz", mask)
-    
-    print("Look here start!")
-    
-    print("xmin: %i" % xmin)
-    print("ymin: %i" % ymin)
-    print("zmin: %i" % zmin)
-    
-    print("----")
-    
-    print("xmax: %i" % xmax)
-    print("ymax: %i" % ymax)
-    print("zmax: %i" % zmax)
-    
-    print("Look here end!")
-    """
+    # Find widths
     wx = x_max-x_min
     wy = y_max-y_min
     wz = z_max-z_min
+    
     # If the widths are odd, add 1 to make them even
     if wx % 2:
         wx += 1 
@@ -233,19 +117,19 @@ if __name__ == "__main__":
       "--ref",
       help="input 3D nifti for reference, can be a normal static scan",
       type=str,
-      default=["2-T1c.nii"],
+      default="2-T1c.nii",
     )
     CLI.add_argument(
       "--tumormask",
       help="A binary mask with 1=tumor tissue, 0=healthy (outside of tumor) tissue",
       type=str,
-      default=["2-Tumormask.nii.gz"],
+      default="2-Tumormask.nii.gz",
     )
     CLI.add_argument(
       "--brainmask",
       help="A binary mask with 1=brain tissue, 0=outside of the brain",
       type=str,
-      default=["2-BrainExtractionMask.nii.gz"],
+      default="2-BrainExtractionMask.nii.gz",
     )
     CLI.add_argument(
       "--displacement",
@@ -260,14 +144,14 @@ if __name__ == "__main__":
       default=5,
     )
     CLI.add_argument(
-      "--max_radial_displacement_to_brainmask_fraction",
-      help="<0=intepolated radial displacement is very local close to the tumor ellipsoid model inflection surface, 1=the maximum intepolated radial displacement will reach or overreach the end of the brain mask along its path. Displacements will cover most of the brain]",
+      "--brain_coverage_fraction",
+      help="<0=brain coverage of displacements is local and the largest displacements are close to the tumor ellipsoid model inflection surface, 1=displacements will cover most of the brain. Maximum radial displacements will reach (or overreach, then scaled down) the end of the brain mask]",
       type=float,
       default=1,
     )
     CLI.add_argument(
-      "--max_radial_displacement_to_outer_ellipsoid_mask_fraction",
-      help="<0=almost no radial data to intepolate, stretching out first (largest) values near inflection surface (0), 1=no cut, entire gaussian_range_one_sided will be used for intepolation, starting from inflection surface]",
+      "--intensity_decay_fraction",
+      help="[0=intensities of displacements decay slowly along radial axes from the tumor ellipsoid model, 1=intensities of displacements decay rapidly along radial axes from the tumor ellipsoid model and the largest displacements are close to the tumor ellipsoid model inflection surface]. This parameter is dependent on brain_coverage_fraction",
       type=float,
       default=1,
     )
@@ -275,13 +159,13 @@ if __name__ == "__main__":
       "--num_vecs",
       help="The number of normal vectors used to simulate the explosive spread of tissue displacement",
       type=int,
-      default=12,
+      default=64,
     )
     CLI.add_argument(
       "--angle_thr",
       help="The maximum angle (in degrees) between a normal vector on the model ellipsoid surface and field vectors allowed when determining a directional binary mask",
       type=int,
-      default=20,
+      default=7,
     )
     CLI.add_argument(
       "--num_splits",
@@ -299,7 +183,7 @@ if __name__ == "__main__":
       "--smoothing_std",
       help="Standard deviation of smoothing of the final intepolated x, y and z displacement",
       type=float,
-      default=1,
+      default=4,
     )    
     CLI.add_argument(
       "--perlin_noise_res",
@@ -312,13 +196,13 @@ if __name__ == "__main__":
       "--perlin_noise_abs_max",
       help="The absolute value of maximum Perlin noise to add. The noise is added to the final intepolated Gaussian and x, y and z displacement (before scaling displacements to specified max displacement, and before scaling displacements that went oustide of the brain)",
       type=float,
-      default=0.2,
+      default=0.05,
     )    
     CLI.add_argument(
       "--out",
       help="Output directory of script for storing result files",
       type=str,
-      default=["results"],
+      default="results",
     )
     CLI.add_argument(
       "--verbose",
@@ -356,7 +240,7 @@ if __name__ == "__main__":
     print(tumorbbox_widths)
     
     # - Build 3D Gaussian and calculate its gradient
-    # Using range [-5,5] as attempt to include most of the function
+    # Using range [-args.gaussian_range_one_sided,args.gaussian_range_one_sided]
     # https://en.wikipedia.org/wiki/Normal_distribution
     #endx = 5
     endx = args.gaussian_range_one_sided
@@ -369,6 +253,8 @@ if __name__ == "__main__":
     # the 1D Gaussians are scaled so that the 3D gaussian retains a shape
     # with inflection surface analog to the inflection point of the 
     # unscaled 1D Gaussian
+    # The 3D Gaussian is inverted in order to have partial derivatives that
+    # resemble an explosion.
     g3d = -1*((gy**(1/3))*(gz**(1/3))*(gx**(1/3)))
     
     # Create the Gaussian in the reference image space
@@ -382,20 +268,23 @@ if __name__ == "__main__":
     
     # - 3D Gaussian gradients
     # The normalized partial derivatives of the 3D Gaussian are used 
-    # to model the healthy and peritumoral displacement caused by nodal tumor growth.
+    # to model the tumoral, peritumoral and healthy displacement 
+    # caused by tumor growth.
     # The normalization is done so that all gradients (displacement vectors)
     # at the surface of the inflection ellipsoid have a magnitude of 1
     g3d_dx, g3d_dy, g3d_dz = np.gradient(g3d)
     dispx3d, dispy3d, dispz3d = g3d_dx/np.max(g3d_dx), \
                                 g3d_dy/np.max(g3d_dy), \
                                 -1*g3d_dz/np.max(g3d_dz) # Invert operation 1
+    # (Invert operation in order to have correct ANTs transformation form)
     
     # - Ellipsoid mask
     # Create a mask of an ellipsoid where maximum displacement 
-    # (= a gradient magnitude of 1) occurs normal to its surface
+    # (= a gradient magnitude of 1) occurs normal to its surface.
+    # 1 is the x coordinate of the inflection point in 1D normal distribution
     ellipsoid_threshold = gaussian_norm(1)
     #ellipsoid_mask = g3d <= -ellipsoid_threshold
-    ellipsoid_mask = g3d < -ellipsoid_threshold
+    ellipsoid_mask = g3d < -ellipsoid_threshold # Since g3d is inverted
         
     # Can use the mask to remove increasing displacements overlapping 
     # with it (~= tumor)
@@ -437,8 +326,8 @@ if __name__ == "__main__":
     # Printing input parameters
     print("Displacement: %f" % args.displacement)
     print("Normal Gaussian x-range: [-%f,%f]" % (-args.gaussian_range_one_sided, args.gaussian_range_one_sided))
-    print("Fraction of maximum radial displacement distance to end of brain mask: %f" % args.max_radial_displacement_to_brainmask_fraction)
-    print("Fraction of maximum radial displacement distance to end of outer ellipsoid mask: %f" % args.max_radial_displacement_to_outer_ellipsoid_mask_fraction)
+    print("Fraction of displacement coverage in the brain: %f" % args.brain_coverage_fraction)
+    print("Fraction of displacement intensity decay within the displacement coverage in the brain: %f" % args.intensity_decay_fraction)
         
     # Insert the normalized gradients of the 3D Gaussian as displacement
     # field vectors
@@ -447,6 +336,7 @@ if __name__ == "__main__":
     field_data[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2, 2] = dispz3d
     
     # Compute more realistic displacement field using various extra information
+    # 1. Scale displacement field using the brian mask.
     brainmask_data = brainmask_img.get_fdata()
     brainmask_data[brainmask_data != 1] = 0 # Note this mask was not binary, making it binary
     #mask_img = nib.spatialimages.SpatialImage(brainmask_data, affine=ref_img.affine, header=ref_img.header)
@@ -488,9 +378,14 @@ if __name__ == "__main__":
     # to interpolate and/or displace the field according to
     # the distance to the end of brain mask.
     
-        
     # Continue using only the num_vecs subset of the vectors
     num_vecs = args.num_vecs
+    
+    # Make sure num_vecs is not larger then the available number of vectors
+    if num_vecs > len(normal_displacement_vectors):
+        if args.verbose == 1:
+            print("Number of vectors specified is larger than the available number of vectors, setting num_vecs to the number of available vectors")
+        num_vecs = len(normal_displacement_vectors)
     
     # Find the subset containing these number of vectors that are the most spread
     normal_displacement_vectors, \
@@ -508,8 +403,8 @@ if __name__ == "__main__":
     #num_splits = 1 # Good if num_vecs is low
     #num_splits = 4 # Good default
     num_splits = args.num_splits
-
-    print("Maximum error angle allowed for directional binary masks [degrees]: %i" % args.angle_thr)    
+    
+    print("Maximum error angle allowed for directional binary masks [degrees]: %i" % args.angle_thr)
     print("Number of splits: %i" % num_splits)
     print("Spline order for intepolation in map_coordinates: %i" % args.spline_order)
     print("Gaussian smoothing standard deviation: %f" % args.smoothing_std)
@@ -533,10 +428,11 @@ if __name__ == "__main__":
     
     print("Processing splits")
     
-    # Setup progress bar
-    sys.stdout.write("[%s]" % (" " * (num_splits+1)))
-    sys.stdout.flush()
-    sys.stdout.write("\b" * (num_splits+2)) # return to start of line, after '['
+    if args.verbose == 0:
+        # Setup progress bar
+        sys.stdout.write("[%s]" % (" " * (num_splits+1)))
+        sys.stdout.flush()
+        sys.stdout.write("\b" * (num_splits+2)) # return to start of line, after '['
     
     # Start timer to measure the time used on the for loop and remaining vectors
     start_time = time.time()
@@ -560,9 +456,10 @@ if __name__ == "__main__":
         bm[...,split_num*split_size:(split_num+1)*split_size][m] = 1
         if args.verbose == 1:
             print("Calculated directional masks")
-        # Append to progress bar
-        sys.stdout.write("-")
-        sys.stdout.flush()
+        if args.verbose == 0:
+            # Append to progress bar
+            sys.stdout.write("-")
+            sys.stdout.flush()
     # Iterate over the remaining normal vectors if existing
     if remaining:
         if args.verbose == 1:
@@ -582,11 +479,13 @@ if __name__ == "__main__":
         bm[...,-remaining:][m] = 1
         if args.verbose == 1:
             print("Calculated remaining directional masks")
-        # Append to progress bar
-        sys.stdout.write("-")
-        sys.stdout.flush()
+        if args.verbose == 0:
+            # Append to progress bar
+            sys.stdout.write("-")
+            sys.stdout.flush()
     
-    sys.stdout.write("]\n") # this ends the progress bar
+    if args.verbose == 0:
+        sys.stdout.write("]\n") # this ends the progress bar
     
     print("Cone computation execution time: %f s" %(time.time()-start_time))
 
@@ -600,7 +499,6 @@ if __name__ == "__main__":
     # As well as the max of the masks (=union)
     bm_max_img = nib.spatialimages.SpatialImage(np.max(bm, axis=-1), affine=ref_img.affine, header=ref_img.header)
     nib.save(bm_max_img, args.out+"/directional-binary-masks-max.nii.gz")
-    #"""
     
     # TODO: These arrays take up a lot of memory, and sparse arrays could be used
     # instead, like:
@@ -631,10 +529,11 @@ if __name__ == "__main__":
 
     print("Processing vectors")
     
-    # Setup progress bar
-    sys.stdout.write("[%s]" % (" " * num_normal_displacement_vectors))
-    sys.stdout.flush()
-    sys.stdout.write("\b" * (num_normal_displacement_vectors+1)) # return to start of line, after '['
+    if args.verbose == 0:
+        # Setup progress bar
+        sys.stdout.write("[%s]" % (" " * num_normal_displacement_vectors))
+        sys.stdout.flush()
+        sys.stdout.write("\b" * (num_normal_displacement_vectors+1)) # return to start of line, after '['
     
     # Start timer to measure the time used on the for loop
     start_time = time.time()
@@ -657,16 +556,18 @@ if __name__ == "__main__":
         # (in order to have correct ANTs transformation form). Invert operation 2
         
         # Normalize the normal vector, to be ensure that it has exactly unit length
+        # (int should already have approximately unit length)
         nv_d = nv_d/np.linalg.norm(nv_d)
         
         if args.verbose == 1:
             print("Displacement: ", end='')
             print(nv_d)
+        
         # Get the directional binary mask corresponding to this
         # normal vector
         bmi = bm[...,i]
         
-        # TODO debuging cone computations
+        # For debuging cone computations
         #np.savez("jp/cone-mask.npz", bmi)
         #np.savez("jp/cone-vectors.npz", field_data[bmi == 1])
         #np.savez("jp/cone-vectors-positions.npz", np.argwhere(bmi))
@@ -675,10 +576,12 @@ if __name__ == "__main__":
         # between its starting position and the end of the original
         # directional binary mask
         n = 1
+        # TODO: Can introduce step size in order to have more accurate displacements
+        # as for now, this is equal to a step size of 1 (n*step_size = 1 here).
         # Start by displacing the vector coordinates
         # using the displacement vector
         p = (nv_c + n*nv_d).astype(np.int)
-        # As long as the coordinates are within the brain binary
+        # As long as the coordinates are within the directional binary
         # mask, displace the coordinates
         while bmi[p[0],p[1],p[2]] != 0: 
         #while brainmask_data[p[1],p[0],p[2]] != 0: # NB! y, x, z (c order)
@@ -689,6 +592,7 @@ if __name__ == "__main__":
         if args.verbose == 1:
             print("Max displaced coordinates within original directional mask: ", end='')
             print(p_max_bmi)
+            
         # Calculate the magnitude of the maximum displacement
         disp_max_bmi = np.linalg.norm((p_max_bmi-nv_c).astype(np.float32))
         if args.verbose == 1:
@@ -697,6 +601,8 @@ if __name__ == "__main__":
         # Find the maximum displacement possible along the nv_d vector 
         # between its starting position and the end of the brain mask
         n = 1
+        # TODO: Can introduce step size in order to have more accurate displacements
+        # as for now, this is equal to a step size of 1 (n*step_size = 1 here).
         # Start by displacing the vector coordinates
         # using the displacement vector
         p = (nv_c + n*nv_d).astype(np.int)
@@ -717,7 +623,7 @@ if __name__ == "__main__":
             print("Max displacement within brain mask along vector: %f" % disp_max_brain)
         
         # Scale the extent (by fraction) of the displacements reaching the end of the brain mask
-        disp_max_brain = args.max_radial_displacement_to_brainmask_fraction*disp_max_brain
+        disp_max_brain = args.brain_coverage_fraction*disp_max_brain
         if args.verbose == 1:
             print("Scaled max displacement within brain mask along vector: %f" % disp_max_brain)
         
@@ -726,11 +632,73 @@ if __name__ == "__main__":
             print("Scaled max displaced coordinates within brain mask: ", end='')
             print(p_max_brain)
         
-        # Find the geometric center of the directional
-        # binary mask BEFORE interpolation
-        if args.verbose == 1:
-            print("Finding bounding box for binary dilated original directional mask")
-        bm_geom_center, bm_widths = bounding_box_mask(binary_dilation(bmi)) # NB! Binary dilation is performed to ensure complete coverage of the field
+        # Get the absolute values of original displacement field
+        # within the original directionary mask
+        dnormcone = dnorm[bmi == 1]
+        # .. as well as the actual displacements
+        dxcone = dx[bmi == 1]
+        dycone = dy[bmi == 1]
+        dzcone = -dz[bmi == 1] # For the same reson for negating nv_d[-1]. Invert operation 3
+        # Normalize the displacement coordinates within the mask
+        # so that each displacement vector is unit length
+        dxcone = dxcone/dnormcone
+        dycone = dycone/dnormcone
+        dzcone = dzcone/dnormcone
+        
+        if args.intensity_decay_fraction > 0:
+            
+            # Making a copy of bmi to work on
+            bmi_copy = bmi.copy()
+            
+            if args.verbose == 1:
+                print("Extending directional mask")
+            
+            # Get all the positions within the original directionary mask
+            # as float32
+            mask_pts = np.argwhere(bmi).astype(np.float32)
+            
+            # Displace the positions of the original directional
+            # binary mask according to the normalized displacement vectors
+            # ,the difference between maximum displacement
+            # and maximum displacement within original directional
+            # binary mask, then scaled with an intensity decay fraction.
+            
+            extension = args.intensity_decay_fraction*(disp_max_brain-disp_max_bmi)
+            # If extension is negative, the the stretched cone
+            # is identical to the original cone (not stretched and bounding bounding box
+            # remains the same)
+            if extension > 0:
+                mask_pts[:,0] += extension*dxcone
+                mask_pts[:,1] += extension*dycone
+                mask_pts[:,2] += extension*dzcone
+            # Fill in the points of the diplaced binary mask. TODO: improve speed if found slow
+            if args.verbose == 1:
+                print("Storing displaced positions for extended directional binary mask")
+            for tofilli in np.unique(mask_pts.astype(np.int), axis=0):
+                xp, yp, zp = tofilli[0], tofilli[1], tofilli[2]
+                if xp < 0 or yp < 0 or zp < 0:
+                    if args.verbose == 1:
+                        print("Negative index of stretched binary mask, Skipping")
+                        print(xp)
+                        print(yp)
+                        print(zp)
+                elif xp < xsize and yp < ysize and zp < zsize and brainmask_data[xp,yp,zp] != 0:
+                    bmi_copy[xp, yp, zp] = 1
+            
+            # Find the geometric center of the directional
+            # binary mask extended for determining coordinates before interpolation
+            if args.verbose == 1:
+                print("Finding bounding box for binary dilated directional mask extended for determining coordinates before interpolation")
+            bm_geom_center, bm_widths = bounding_box_mask(binary_dilation(bmi_copy)) # NB! Binary dilation is performed to ensure complete coverage of the field
+            #bm_geom_center, bm_widths = bounding_box_mask(bmi_copy)
+        else:
+            # Find the geometric center of the directional
+            # binary mask extended for determining coordinates before interpolation
+            if args.verbose == 1:
+                print("Finding bounding box for binary dilated directional mask for determining coordinates before interpolation")
+            bm_geom_center, bm_widths = bounding_box_mask(binary_dilation(bmi)) # NB! Binary dilation is performed to ensure complete coverage of the field
+            #bm_geom_center, bm_widths = bounding_box_mask(bmi)
+        
         bmcx, bmcy, bmcz = bm_geom_center
         bmwx, bmwy, bmwz = bm_widths
         
@@ -768,25 +736,16 @@ if __name__ == "__main__":
         #print("Finding bounding box for directional mask with maximum displaced position added")
         # Not used end
         
+        # Making a copy of bmi to work on
+        bmi_copy = bmi.copy()
+        
         if args.verbose == 1:
             print("Extending directional mask")
-        
-        # Find bounding box for interpolation
+
         # Get all the positions within the original directionary mask
         # as float32
         mask_pts = np.argwhere(bmi).astype(np.float32)
-        # Get the absolute values of original displacement field
-        # within the original directionary mask
-        dnormcone = dnorm[bmi == 1]
-        # .. as well as the actual displacements
-        dxcone = dx[bmi == 1]
-        dycone = dy[bmi == 1]
-        dzcone = -dz[bmi == 1] # For the same reson for negating nv_d[-1]. Invert operation 3
-        # Normalize the displacement coordinates within the mask
-        # so that each displacement vector is unit length
-        dxcone = dxcone/dnormcone
-        dycone = dycone/dnormcone
-        dzcone = dzcone/dnormcone
+        
         # Displace the positions of the original directional
         # binary mask according to these displacement vectors
         # and the difference between maximum displacement
@@ -800,9 +759,7 @@ if __name__ == "__main__":
             mask_pts[:,0] += extension*dxcone
             mask_pts[:,1] += extension*dycone
             mask_pts[:,2] += extension*dzcone
-        
         # Fill in the points of the diplaced binary mask. TODO: improve speed if found slow
-        #bmi[tuple(np.unique(mask_pts.astype(np.int), axis=0))] = 1
         if args.verbose == 1:
             print("Storing displaced positions for extended directional binary mask")
         for tofilli in np.unique(mask_pts.astype(np.int), axis=0):
@@ -813,14 +770,15 @@ if __name__ == "__main__":
                     print(xp)
                     print(yp)
                     print(zp)
-            #if xp >= 0 and xp < xsize and yp >= 0 and yp < ysize and zp >= 0 and zp < zsize:
             elif xp < xsize and yp < ysize and zp < zsize and brainmask_data[xp,yp,zp] != 0:
-                bmi[xp, yp, zp] = 1
+                bmi_copy[xp, yp, zp] = 1
         
         # Now the new bounding box can be found
         if args.verbose == 1:
-            print("Finding bounding box for binary dilated extended directional mask")
-        bm_geom_center_interp, bm_widths_interp = bounding_box_mask(binary_dilation(bmi)) # NB! Binary dilation is performed to ensure complete coverage of the field
+            print("Finding bounding box for binary dilated directional mask extended for determining coordinates after interpolation")
+        bm_geom_center_interp, bm_widths_interp = bounding_box_mask(binary_dilation(bmi_copy)) # NB! Binary dilation is performed to ensure complete coverage of the field
+        #bm_geom_center_interp, bm_widths_interp = bounding_box_mask(bmi_copy)
+        
         bmcx_interp, bmcy_interp, bmcz_interp = bm_geom_center_interp
         bmwx_interp, bmwy_interp, bmwz_interp = bm_widths_interp
         
@@ -837,6 +795,7 @@ if __name__ == "__main__":
                            bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
                            i] = 1
         
+        """
         # Find the maximum displacement possible along the nv_d vector 
         # between its starting position and the end of the outer ellipsoid mask
         n = 1
@@ -858,18 +817,19 @@ if __name__ == "__main__":
         # Calculate the absolute max difference between p_max_oel and nv_c
         diff_max_oel_abs = np.abs((p_max_oel-nv_c).astype(np.float32))
         if args.verbose == 1:
-            print("Absolute max difference between intersection of vector on outer ellipsoid mask surface, and vector position: " , end='')
+            print("Absolute max difference between ellipsoid mask surface and outer ellipsoid mask surface along vector: " , end='')
             print(diff_max_oel_abs)
+        """
         
         # Extract the components of the vector position (inflection point)
-        nv_cx, nv_cy, nv_cz = nv_c
+        #nv_cx, nv_cy, nv_cz = nv_c
 
         # Extract the components of the vector (displacement point). This remembers invert operation 2
-        nv_dx, nv_dy, nv_dz = nv_d
+        #nv_dx, nv_dy, nv_dz = nv_d
         
         # Extract the components of the maximum displacement along 
         # nv_d within the outer ellipsoid mask
-        diff_max_abs_x, diff_max_abs_y, diff_max_abs_z = diff_max_oel_abs
+        #diff_max_abs_x, diff_max_abs_y, diff_max_abs_z = diff_max_oel_abs
         
         # Scaling parameter <0,1] : max_radial_displacement_to_outer_ellipsoid_mask_fraction
         # 0.1: Only using the value nearest inflection surface to intepolate.
@@ -878,8 +838,8 @@ if __name__ == "__main__":
         # surface will be used for intepolation. Large value will lead to least
         # rigid / most elastic displacements.
         #scale_param = 0.5
-        scale_param = args.max_radial_displacement_to_outer_ellipsoid_mask_fraction
-        
+        #scale_param = args.max_radial_displacement_to_outer_ellipsoid_mask_fraction
+        """
         # Find the correct start and end points for intepolation
         # inside the original bounding box
         if bmcx > nv_cx:
@@ -918,10 +878,16 @@ if __name__ == "__main__":
         xi, yi, zi = np.mgrid[cstartx:cendx:bmwx_interp*1j, \
                               cstarty:cendy:bmwy_interp*1j, \
                               cstartz:cendz:bmwz_interp*1j]
-        # Old version
+        # Old version        
         #xi, yi, zi = np.mgrid[bmcx-bmwx//2:bmcx:bmwx_interp*1j, \
         #                      bmcy-bmwy//2:bmcy:bmwy_interp*1j, \
         #                      bmcz-bmwz//2:bmcz:bmwz_interp*1j]
+        """
+        
+        # Define a new grid for interpolation of points        
+        xi, yi, zi = np.mgrid[bmcx-bmwx//2:bmcx+bmwx//2:bmwx_interp*1j, \
+                              bmcy-bmwy//2:bmcy+bmwy//2:bmwy_interp*1j, \
+                              bmcz-bmwz//2:bmcz+bmwz//2:bmwz_interp*1j]
         
         # Interpolate
         if args.verbose == 1:
@@ -994,11 +960,13 @@ if __name__ == "__main__":
         gc.collect()
         print("Garbage collect done")
         """
-        # Append to progress bar
-        sys.stdout.write("-")
-        sys.stdout.flush()
+        if args.verbose == 0:
+            # Append to progress bar
+            sys.stdout.write("-")
+            sys.stdout.flush()
     
-    sys.stdout.write("]\n") # this ends the progress bar
+    if args.verbose == 0:
+        sys.stdout.write("]\n") # this ends the progress bar
     
     print("Interpolation execution time: %f s" %(time.time()-start_time))
     
@@ -1033,7 +1001,7 @@ if __name__ == "__main__":
     
     # Take the mean or max over the last axis, excluding nan values
     print("Splitting interpolated displacement values before computing mean")
-    # TODO, for debug
+    # For debug
     #np.savez("field_data_interp.npz", field_data_interp)
     
     # Split interpolated field data, to be able to compute means without
@@ -1099,6 +1067,8 @@ if __name__ == "__main__":
     gaussian_data_interp[np.isnan(gaussian_data_interp)] = 0
     
     # Smooth
+    # NB! Gaussian smoothing like this will lower the extreme values (maximum absolute displacement)
+    # a little.
     print("Smoothing interpolated x displacement")
     field_data_interp[...,0] = gaussian_filter(field_data_interp[...,0], sigma=args.smoothing_std)
     print("Smoothing interpolated y displacement")
@@ -1107,10 +1077,8 @@ if __name__ == "__main__":
     field_data_interp[...,2] = gaussian_filter(field_data_interp[...,2], sigma=args.smoothing_std)
     print("Smoothing interpolated Gaussian")
     gaussian_data_interp = gaussian_filter(gaussian_data_interp, sigma=args.smoothing_std)
-
-    # Add noise to the interpolated field and Gaussian BEFORE scaling with specified displacement
-    #print("Adding noise")
     
+    # Add noise to the interpolated field and Gaussian BEFORE scaling with specified displacement    
     """
     # Gaussian noise
     field_data += \
@@ -1202,8 +1170,7 @@ if __name__ == "__main__":
     field_data_interp[brainmask_data != 1] = 0
     gaussian_data_interp[brainmask_data != 1] = 0
     
-    #"""
-    # Avoid displacing outside of the brain mask
+    # Avoid displacing outside of the brain mask, NB! Might crash if Gaussian smoothng is turned off
     print("Scaling interpolated displacement field to not displace outside of the brain mask")
     # Get all the positions (points) within the brian mask
     mask_pts = np.argwhere(brainmask_data).astype(np.float32)
@@ -1223,7 +1190,7 @@ if __name__ == "__main__":
     # Stack together the coordinates of the points that were displaced to outside for the brain mask
     points_outside_mask = \
     np.stack((points_outside_mask_x, points_outside_mask_y, points_outside_mask_z), axis=0).any(axis=0)
-
+    
     # Contiue working only with points and displacements that went outside of the brain mask
     mask_pts_went_outside = mask_pts[points_outside_mask]
     dinterpmask_went_outside = dinterpmask[points_outside_mask]
@@ -1243,12 +1210,12 @@ if __name__ == "__main__":
     points_outside_mask_x = ~np.isin(allpts_displacements_x.astype(np.int), mask_pts_x.astype(np.int))
     points_outside_mask_y = ~np.isin(allpts_displacements_y.astype(np.int), mask_pts_y.astype(np.int))
     points_outside_mask_z = ~np.isin(allpts_displacements_z.astype(np.int), mask_pts_z.astype(np.int))
+    #points_outside_mask = np.stack((points_outside_mask_x, points_outside_mask_y, points_outside_mask_z), axis=0).any(axis=0)
+    # Find the furthest candidate displacement that are still within the brain mask
+    # If no candadita displacement was found, the returned candidate displacement will be negative.
+    # Set these negative values to 0, indicating no displacement as the candidate displacement.
     # Continue only if some points actually went outside of the mask
-    if points_outside_mask_x.size: # Other coordinate components will follow
-        #points_outside_mask = np.stack((points_outside_mask_x, points_outside_mask_y, points_outside_mask_z), axis=0).any(axis=0)
-        # Find the furthest candidate displacement that are still within the brain mask
-        # If no candadita displacement was found, the returned candidate displacement will be negative.
-        # Set these negative values to 0, indicating no displacement as the candidate displacement.
+    if points_outside_mask_x.size:
         furthest_point_within_mask_x = np.argmax(points_outside_mask_x, axis=-1).astype(np.float32)-1
         furthest_point_within_mask_x[furthest_point_within_mask_x < 0] = 0
         furthest_point_within_mask_y = np.argmax(points_outside_mask_y, axis=-1).astype(np.float32)-1
@@ -1266,7 +1233,6 @@ if __name__ == "__main__":
         dinterpmask[points_outside_mask] = dinterpmask_restricted
         dinterpmask[:,-1] *= -1 # NB! Invert operation 5 (invert z component back, for ANTs)
         field_data_interp[brainmask_data == 1] = dinterpmask
-    #"""
     
     # Save original (non-intepolated) field
     print("Saving original fields")
@@ -1281,7 +1247,7 @@ if __name__ == "__main__":
     
     # Save intepolated field
     print("Saving interpolated fields and Gaussian")
-    #np.savez("field_data_interp.npz", field_data_interp) # TODO
+    #np.savez("field_data_interp.npz", field_data_interp)
     field_img_interp = nib.spatialimages.SpatialImage(field_data_interp, affine=ref_img.affine, header=ref_img.header)
     #nib.save(field_img_interp, "interp-"+args.fout)
     nib.save(field_img_interp, args.out+"/interp-field-"+str(args.displacement)+"mm.nii.gz")

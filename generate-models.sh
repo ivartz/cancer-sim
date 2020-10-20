@@ -29,10 +29,10 @@ while read -r param values; do
         # https://tldp.org/LDP/abs/html/process-sub.html
     elif [ $param == "gaussian_range_one_sided" ]; then
         readarray -d " " gaussian_range_one_sided < <(echo -n $values)
-    elif [ $param == "max_radial_displacement_to_brainmask_fraction" ]; then
-        readarray -d " " max_radial_displacement_to_brainmask_fraction < <(echo -n $values)
-    elif [ $param == "max_radial_displacement_to_outer_ellipsoid_mask_fraction" ]; then
-        readarray -d " " max_radial_displacement_to_outer_ellipsoid_mask_fraction < <(echo -n $values)
+    elif [ $param == "brain_coverage_fraction" ]; then
+        readarray -d " " brain_coverage_fraction < <(echo -n $values)
+    elif [ $param == "intensity_decay_fraction" ]; then
+        readarray -d " " intensity_decay_fraction < <(echo -n $values)
     elif [ $param == "num_vecs" ]; then
         readarray -d " " num_vecs < <(echo -n $values)
     elif [ $param == "angle_thr" ]; then
@@ -57,7 +57,7 @@ idx=1
 cp $params $mdir
 
 # Start of file for saving model parameters
-echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "idx" "disp" "grange" "mradb" "mrade" "vecs" "angle" "splits" "splo" "sm" "pres" "pabs") > $mdir/params-all.txt
+echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "idx" "disp" "grange" "bcf" "idf" "vecs" "angle" "splits" "splo" "sm" "pres" "pabs") > $mdir/params-all.txt
 
 for disp in ${displacement[*]}; do
     if [ $verbose == 1 ]; then
@@ -67,11 +67,11 @@ for disp in ${displacement[*]}; do
         if [ $verbose == 1 ]; then
             echo "2"
         fi
-        for mradb in ${max_radial_displacement_to_brainmask_fraction[*]}; do
+        for bcf in ${brain_coverage_fraction[*]}; do
             if [ $verbose == 1 ]; then
                 echo "3"
             fi
-            for mrade in ${max_radial_displacement_to_outer_ellipsoid_mask_fraction[*]}; do
+            for idf in ${intensity_decay_fraction[*]}; do
                 if [ $verbose == 1 ]; then
                     echo "4"
                 fi
@@ -108,12 +108,12 @@ for disp in ${displacement[*]}; do
                                         pabs=0
                                         
                                         # Save model parameters
-                                        echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs) >> $mdir/params-all.txt
+                                        echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs) >> $mdir/params-all.txt
                                         
                                         # Create output folder
                                         mkdir -p $mdir/$ofname
                                         
-                                        runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
+                                        runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
                                         echo $runcmd
                                         eval $runcmd
                                         
@@ -131,12 +131,12 @@ for disp in ${displacement[*]}; do
                                                 ofname=$(printf %04d $idx)
                                                 
                                                 # Save model parameters
-                                                echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs) >> $mdir/params-all.txt
+                                                echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs) >> $mdir/params-all.txt
                                                 
                                                 # Create output folder
                                                 mkdir -p $mdir/$ofname
                                                 
-                                                runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $mradb $mrade $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
+                                                runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
                                                 echo $runcmd
                                                 eval $runcmd
                                                 
