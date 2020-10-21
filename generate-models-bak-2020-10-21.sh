@@ -32,19 +32,19 @@ idx=1
 cpcmd="cp $params $mdir"
 eval $cpcmd
 
-: '
 # Store expected number of combinations to file
-if [ ${#perlin_noise_abs_max[*]} == 1 ] && (( $(echo "${perlin_noise_abs_max[0]} == 0" | bc -l) )); then
+if [ ${#perlin_noise_abs_max[*]} == 1 ] && [ ${perlin_noise_abs_max[0]} -eq 0 ]; then
     echo "$((${#displacement[*]}*${#gaussian_range_one_sided[*]}*${#brain_coverage_fraction[*]}*${#intensity_decay_fraction[*]}*${#num_vecs[*]}*${#angle_thr[*]}*${#num_splits[*]}*${#spline_order[*]}*${#smoothing_std[*]}))" > $mdir/expected-num-models.txt
-elif (( $(echo "${perlin_noise_abs_max[0]} == 0" | bc -l) )); then
+#elif [[ ${perlin_noise_abs_max[*]} =~ 0 ]]; then
+    # [[  ]] because =~ is an operator in the [[ expression ]] compound command
+elif [ ${perlin_noise_abs_max[0]} -eq 0 ]; then
     # If perlin_noise_abs_max contains a 0 at the first position.
     # Assume that the list is always sorted.
     # Assume perlin_noise_abs_max contains exactly one 0
-    echo "$((${#displacement[*]}*${#gaussian_range_one_sided[*]}*${#brain_coverage_fraction[*]}*${#intensity_decay_fraction[*]}*${#num_vecs[*]}*${#angle_thr[*]}*${#num_splits[*]}*${#spline_order[*]}*${#smoothing_std[*]}*${#perlin_noise_res[*]}*(${#perlin_noise_abs_max[*]}-1)+1))" > $mdir/expected-num-models.txt
+    echo "$((${#displacement[*]}*${#gaussian_range_one_sided[*]}*${#brain_coverage_fraction[*]}*${#intensity_decay_fraction[*]}*${#num_vecs[*]}*${#angle_thr[*]}*${#num_splits[*]}*${#spline_order[*]}*${#smoothing_std[*]}*${#perlin_noise_res[*]}*(${#perlin_noise_abs_max[*]}-1)))" > $mdir/expected-num-models.txt
 else
     echo "$((${#displacement[*]}*${#gaussian_range_one_sided[*]}*${#brain_coverage_fraction[*]}*${#intensity_decay_fraction[*]}*${#num_vecs[*]}*${#angle_thr[*]}*${#num_splits[*]}*${#spline_order[*]}*${#smoothing_std[*]}*${#perlin_noise_res[*]}*${#perlin_noise_abs_max[*]}))" > $mdir/expected-num-models.txt
 fi
-'
 
 # Start of file for saving model parameters
 echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "idx" "disp" "grange" "bcf" "idf" "vecs" "angle" "splits" "splo" "sm" "pres" "pabs") > $mdir/params-all.txt
@@ -85,7 +85,7 @@ for disp in ${displacement[*]}; do
                                     if [ $verbose == 1 ]; then
                                         echo "9"
                                     fi
-                                    if [ ${#perlin_noise_abs_max[*]} == 1 ] && (( $(echo "${perlin_noise_abs_max[0]} == 0" | bc -l) )); then
+                                    if [ ${#perlin_noise_abs_max[*]} == 1 ] && [ ${perlin_noise_abs_max[0]} -eq 0 ]; then
                                         # Skipping all combinations of perlin_noise_res
                                         # since perlin_noise_abs_max is 0 and have a length of 1
                                         if [ $verbose == 1 ]; then
@@ -116,12 +116,14 @@ for disp in ${displacement[*]}; do
                                                 echo "10"
                                             fi
                                             pres=${perlin_noise_res[$pres_i]}
+                                            
                                             for pabs in ${perlin_noise_abs_max[*]}; do
                                                 if [ $verbose == 1 ]; then
                                                     echo "11"
                                                 fi
                                                 
-                                                if (( $(echo "${perlin_noise_abs_max[0]} > 0" | bc -l) )); then
+                                                if [ ${perlin_noise_abs_max[0]} > 0 ]; then
+
                                                     ofname=$(printf %04d $idx)
                                                     
                                                     # Save model parameters
@@ -133,28 +135,36 @@ for disp in ${displacement[*]}; do
                                                     runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
                                                     echo $runcmd
                                                     #eval $runcmd
-                                                    
                                                     idx=$((idx+1))
                                                     
-                                                elif (( $(echo "${perlin_noise_abs_max[0]} == 0" | bc -l) )); then
-                                                    if (( $(echo "$pabs == 0" | bc -l) )) && [ $pres_i -gt 0 ]; then
-                                                        # No operation, pass
-                                                        :
-                                                    else
-                                                        ofname=$(printf %04d $idx)
-                                                        
-                                                        # Save model parameters
-                                                        echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs) >> $mdir/params-all.txt
-                                                        
-                                                        # Create output folder
-                                                        mkdir -p $mdir/$ofname
-                                                        
-                                                        runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
-                                                        echo $runcmd
-                                                        #eval $runcmd
-                                                        
-                                                        idx=$((idx+1))
-                                                    fi
+                                                elif [ ${perlin_noise_abs_max[0]} -eq 0 ] && [ $pabs -eq 0 ] && [ $pres_i -eq 0 ]; then
+                                                    
+                                                    ofname=$(printf %04d $idx)
+                                                    
+                                                    # Save model parameters
+                                                    echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs) >> $mdir/params-all.txt
+                                                    
+                                                    # Create output folder
+                                                    mkdir -p $mdir/$ofname
+                                                    
+                                                    runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
+                                                    echo $runcmd
+                                                    #eval $runcmd
+                                                    idx=$((idx+1))
+                                                
+                                                elif [ ${perlin_noise_abs_max[0]} -eq 0 ] && [ $pabs -ne 0 ]; then
+                                                    ofname=$(printf %04d $idx)
+                                                    
+                                                    # Save model parameters
+                                                    echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs) >> $mdir/params-all.txt
+                                                    
+                                                    # Create output folder
+                                                    mkdir -p $mdir/$ofname
+                                                    
+                                                    runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
+                                                    echo $runcmd
+                                                    #eval $runcmd
+                                                    idx=$((idx+1))
                                                 fi
                                             done
                                         done

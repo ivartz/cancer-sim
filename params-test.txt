@@ -7,5 +7,6 @@ angle_thr=7
 num_splits=4
 spline_order=1
 smoothing_std=4
-perlin_noise_res=0.2
-perlin_noise_abs_max=0
+perlin_noise_res=0.2 0.6 2 3
+perlin_noise_abs_max=0 0.5
+
