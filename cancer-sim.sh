@@ -46,6 +46,4 @@ python3 cancer-displacement.py --ref $ref \
                                --out $odir \
                                --verbose 0
 
-bash displace-3d.sh $odir $disp
-
-#bash copy-to-client.sh $odir $disp
+bash displace-3d.sh $ref $ref $odir $disp

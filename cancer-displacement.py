@@ -117,7 +117,7 @@ if __name__ == "__main__":
       "--ref",
       help="input 3D nifti for reference, can be a normal static scan",
       type=str,
-      default="2-T1c.nii",
+      default="2-T1c.nii.gz",
     )
     CLI.add_argument(
       "--tumormask",
@@ -135,7 +135,7 @@ if __name__ == "__main__":
       "--displacement",
       help="<0,large] [mm]. The maximum amount of radial displacement (in isotropic units according to --ref) to add",
       type=float,
-      default=1,
+      default=4,
     )
     CLI.add_argument(
       "--gaussian_range_one_sided",
@@ -153,7 +153,7 @@ if __name__ == "__main__":
       "--intensity_decay_fraction",
       help="[0=intensities of displacements decay slowly along radial axes from the tumor ellipsoid model, 1=intensities of displacements decay rapidly along radial axes from the tumor ellipsoid model and the largest displacements are close to the tumor ellipsoid model inflection surface]. This parameter is dependent on brain_coverage_fraction",
       type=float,
-      default=1,
+      default=0.5,
     )
     CLI.add_argument(
       "--num_vecs",
@@ -190,7 +190,7 @@ if __name__ == "__main__":
       #help="If Gaussian noise used, standard deviation (mean=0); if perlin noise; number of periods of noise to generate along each axis (mean ~0). The noise is added to the final intepolated Gaussian and x, y and z displacement (before scaling displacements to specified max displacement, and before scaling displacements that went oustide of the brain)",
       help="<0,1]. The number of periods of noise to generate along each axis for Perlin noise. The noise is added to the final intepolated Gaussian and x, y and z displacement (before scaling displacements to specified max displacement, and before scaling displacements that went oustide of the brain)",
       type=float,
-      default=0.1,
+      default=0.2,
     )    
     CLI.add_argument(
       "--perlin_noise_abs_max",
@@ -208,12 +208,15 @@ if __name__ == "__main__":
       "--verbose",
       help="Print all messages",
       type=int,
-      default=1,
+      default=0,
     )
     args = CLI.parse_args()
         
     # Store start time for the script
     script_start_time = time.time()
+    
+    # Set seed for random number generator used on Perlin noise generation
+    random_seed = 0
     
     # Create output dir if not existing
     if not os.path.exists(args.out):
@@ -242,7 +245,6 @@ if __name__ == "__main__":
     # - Build 3D Gaussian and calculate its gradient
     # Using range [-args.gaussian_range_one_sided,args.gaussian_range_one_sided]
     # https://en.wikipedia.org/wiki/Normal_distribution
-    #endx = 5
     endx = args.gaussian_range_one_sided
     gy = gaussian_norm(np.linspace(-endx, endx, wy)).reshape((wy, 1))
     gz = gaussian_norm(np.linspace(-endx, endx, wz)).reshape((wz, 1)).T
@@ -1104,12 +1106,15 @@ if __name__ == "__main__":
         zsize_perlin = zsize - (zsize%resz)
         # Generate perlin noise
         print("Generating Perlin noise for x displacement")
+        np.random.seed(random_seed)
         noisex = \
         args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
         print("Generating Perlin noise for y displacement")
+        np.random.seed(random_seed)
         noisey = \
         args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
         print("Generating Perlin noise for z displacement")
+        np.random.seed(random_seed)
         noisez = \
         args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
         print("Adding perlin noise to original displacement field")
@@ -1170,6 +1175,10 @@ if __name__ == "__main__":
     field_data_interp[brainmask_data != 1] = 0
     gaussian_data_interp[brainmask_data != 1] = 0
     
+    # Restrict displacements leaving the brain START
+    # TODO: This section of code could be further improved and optimzed:
+    # 1. Improvements: Better handling of edge cases. 
+    # 2. Optimization: Abstraction.
     # Avoid displacing outside of the brain mask, NB! Might crash if Gaussian smoothng is turned off
     print("Scaling interpolated displacement field to not displace outside of the brain mask")
     # Get all the positions (points) within the brian mask
@@ -1191,31 +1200,34 @@ if __name__ == "__main__":
     points_outside_mask = \
     np.stack((points_outside_mask_x, points_outside_mask_y, points_outside_mask_z), axis=0).any(axis=0)
     
-    # Contiue working only with points and displacements that went outside of the brain mask
-    mask_pts_went_outside = mask_pts[points_outside_mask]
-    dinterpmask_went_outside = dinterpmask[points_outside_mask]
-    # Find the absolute value of displacements that went outside of the brain mask
-    dinterpmasknorm_went_outside = np.linalg.norm(dinterpmask_went_outside, axis=-1)
-    # Find the maximum absolute displacement
-    maxdisp_went_outside = np.max(dinterpmasknorm_went_outside)
-    
-    # Calculate all candidate displacements that are restricted to within the brain mask
-    dnorm_went_outside = dinterpmask_went_outside/np.expand_dims(dinterpmasknorm_went_outside, axis=-1)
-    # q = p + n*np.arange(maxdisp_went_outside.astype(np.int)). Where n is the normalized displacement vector starting from point p
-    allpts_displacements = \
-    np.expand_dims(mask_pts_went_outside, axis=-1) + np.expand_dims(dnorm_went_outside, axis=-1)*np.arange(maxdisp_went_outside.astype(np.int))
-    allpts_displacements_x, allpts_displacements_y, allpts_displacements_z = \
-    allpts_displacements[:,0,:], allpts_displacements[:,1,:], allpts_displacements[:,2,:]
-    # Create mask of the candidate displacements that went oustie of the brain
-    points_outside_mask_x = ~np.isin(allpts_displacements_x.astype(np.int), mask_pts_x.astype(np.int))
-    points_outside_mask_y = ~np.isin(allpts_displacements_y.astype(np.int), mask_pts_y.astype(np.int))
-    points_outside_mask_z = ~np.isin(allpts_displacements_z.astype(np.int), mask_pts_z.astype(np.int))
-    #points_outside_mask = np.stack((points_outside_mask_x, points_outside_mask_y, points_outside_mask_z), axis=0).any(axis=0)
-    # Find the furthest candidate displacement that are still within the brain mask
-    # If no candadita displacement was found, the returned candidate displacement will be negative.
-    # Set these negative values to 0, indicating no displacement as the candidate displacement.
-    # Continue only if some points actually went outside of the mask
-    if points_outside_mask_x.size:
+    # Continue only if some points actually went outside of the mask    
+    if points_outside_mask.size == 0:
+        # Contiue working only with points and displacements that went outside of the brain mask
+        mask_pts_went_outside = mask_pts[points_outside_mask]
+        dinterpmask_went_outside = dinterpmask[points_outside_mask]
+        # Find the absolute value of displacements that went outside of the brain mask
+        dinterpmasknorm_went_outside = np.linalg.norm(dinterpmask_went_outside, axis=-1)
+        # Find the maximum absolute displacement
+        maxdisp_went_outside = np.max(dinterpmasknorm_went_outside)
+        # Calculate all candidate displacements that are restricted to within the brain mask
+        dnorm_went_outside = dinterpmask_went_outside/np.expand_dims(dinterpmasknorm_went_outside, axis=-1)
+        # q = p + n*np.arange(maxdisp_went_outside.astype(np.int)). Where n is the normalized displacement vector starting from point p
+        allpts_displacements = \
+        np.expand_dims(mask_pts_went_outside, axis=-1) + np.expand_dims(dnorm_went_outside, axis=-1)*np.arange(maxdisp_went_outside.astype(np.int))
+        allpts_displacements_x, allpts_displacements_y, allpts_displacements_z = \
+        allpts_displacements[:,0,:], allpts_displacements[:,1,:], allpts_displacements[:,2,:]
+        # Create mask of the candidate displacements that went oustie of the brain
+        points_outside_mask_x = ~np.isin(allpts_displacements_x.astype(np.int), mask_pts_x.astype(np.int))
+        points_outside_mask_y = ~np.isin(allpts_displacements_y.astype(np.int), mask_pts_y.astype(np.int))
+        points_outside_mask_z = ~np.isin(allpts_displacements_z.astype(np.int), mask_pts_z.astype(np.int))
+        #points_outside_mask = np.stack((points_outside_mask_x, points_outside_mask_y, points_outside_mask_z), axis=0).any(axis=0)
+        # Find the furthest candidate displacement that are still within the brain mask
+        # If no candadita displacement was found, the returned candidate displacement will be negative.
+        # Set these negative values to 0, indicating no displacement as the candidate displacement.
+        # Continue only if some points actually went outside of the mask
+        
+        #if points_outside_mask_x.size: TODO, investigate if necessary        
+        
         furthest_point_within_mask_x = np.argmax(points_outside_mask_x, axis=-1).astype(np.float32)-1
         furthest_point_within_mask_x[furthest_point_within_mask_x < 0] = 0
         furthest_point_within_mask_y = np.argmax(points_outside_mask_y, axis=-1).astype(np.float32)-1
@@ -1233,6 +1245,7 @@ if __name__ == "__main__":
         dinterpmask[points_outside_mask] = dinterpmask_restricted
         dinterpmask[:,-1] *= -1 # NB! Invert operation 5 (invert z component back, for ANTs)
         field_data_interp[brainmask_data == 1] = dinterpmask
+    # Restrict displacements leaving the brain END
     
     # Save original (non-intepolated) field
     print("Saving original fields")
