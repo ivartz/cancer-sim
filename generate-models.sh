@@ -105,7 +105,7 @@ for disp in ${displacement[*]}; do
                                         
                                         runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
                                         echo $runcmd
-                                        #eval $runcmd
+                                        eval $runcmd
                                         
                                         idx=$((idx+1))
                                     else
@@ -132,7 +132,7 @@ for disp in ${displacement[*]}; do
                                                     
                                                     runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
                                                     echo $runcmd
-                                                    #eval $runcmd
+                                                    eval $runcmd
                                                     
                                                     idx=$((idx+1))
                                                     
@@ -151,7 +151,7 @@ for disp in ${displacement[*]}; do
                                                         
                                                         runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $bcf $idf $vecs $angle $splits $splo $sm $pres $pabs $mdir/$ofname)
                                                         echo $runcmd
-                                                        #eval $runcmd
+                                                        eval $runcmd
                                                         
                                                         idx=$((idx+1))
                                                     fi
