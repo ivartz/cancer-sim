@@ -516,13 +516,15 @@ if __name__ == "__main__":
     
     # Make the array for holding all intepolated displacement values
     print("Making array for holding all intepolated displacement values and initialize it with nan values")
-    field_data_interp = np.empty(ref_img.shape+(3,num_normal_displacement_vectors), dtype=np.float32)
-    field_data_interp[:] = np.nan
+    f_shape = ref_img.shape + (3,)
+    field_data_interp = np.zeros(f_shape, dtype=np.float32)
+    num_of_elem_disp = np.zeros(f_shape, dtype=np.float32)
     
     # Make the array for holding all intepolated gaussian values
     print("Making array for holding all intepolated Gaussian values and initialize it with nan values")
-    gaussian_data_interp = np.empty(ref_img.shape+(num_normal_displacement_vectors,), dtype=np.float32)
-    gaussian_data_interp[:] = np.nan
+    g_shape = ref_img.shape
+    gaussian_data_interp = np.zeros(g_shape, dtype=np.float32)
+    num_of_elem_gauss = np.zeros(g_shape, dtype=np.float32)
     
     # Split the components of the displacement field into three 
     # scalar fields
@@ -542,6 +544,8 @@ if __name__ == "__main__":
     # Iterate over each normal vector, that we just created
     # directional binary masks for
     #for i in range(2, num_normal_displacement_vectors-1): # when num_vecs = 4 (for debug)
+    displacements = []
+    gaussians = []
     for i in range(num_normal_displacement_vectors):
         if args.verbose == 1:
             print("Processing vector: %i/%i" % (i+1, num_normal_displacement_vectors))
@@ -911,22 +915,15 @@ if __name__ == "__main__":
         
         if args.verbose == 1:
             print("Inserting interpolated displacements and Gaussian into existing arrays")
-        field_data_interp[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
-                          bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
-                          bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
-                          0, i] = dxi
-        field_data_interp[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
-                          bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
-                          bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
-                          1, i] = dyi
-        field_data_interp[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
-                          bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
-                          bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
-                          2, i] = dzi
-        gaussian_data_interp[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
-                             bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
-                             bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
-                             i] = gaussian_data_interp_part
+
+        # Store displacements and gaussian with a sparse structure
+        bmc = [bmcx_interp, bmcy_interp, bmcz_interp]
+        bmw = [bmwx_interp, bmwy_interp, bmwz_interp]
+        coord = [(c - w // 2, c + w // 2) for c, w in
+                 zip(bmc, bmw)]  # tuple of start and end position for x, y and z
+        displacements.append((coord, np.stack([dxi, dyi, dzi], axis=-1)))
+        gaussians.append((coord, gaussian_data_interp_part))
+
         if args.verbose == 1:
             print("Inserting done")
         """
@@ -966,7 +963,20 @@ if __name__ == "__main__":
             # Append to progress bar
             sys.stdout.write("-")
             sys.stdout.flush()
-    
+
+    # Assign interpolated displacements and Gaussian into existing arrays, and
+    # for later compute mean: compute the sum over each box and the respective amount of numbers (non-nan)
+    for c, d in displacements:
+        s = tuple((slice(*k) for k in c)) + (slice(0, 3),)
+        field_data_interp[s] += d
+        num_of_elem_disp[s] += 1
+    for c, d in gaussians:
+        s = tuple((slice(*k) for k in c))
+        gaussian_data_interp[s] += d
+        num_of_elem_gauss[s] += 1
+
+    # print("Memory used: %.2f G" % ((psutil.virtual_memory().used - mem_used) / 1024 / 1024 / 1024))
+
     if args.verbose == 0:
         sys.stdout.write("]\n") # this ends the progress bar
     
@@ -1008,32 +1018,36 @@ if __name__ == "__main__":
     
     # Split interpolated field data, to be able to compute means without
     # exceeding memory limits
-    field_data_interp_x, field_data_interp_y, field_data_interp_z = \
-    field_data_interp[:,:,:,0,:], field_data_interp[:,:,:,1,:], field_data_interp[:,:,:,2,:]
+    # field_data_interp_x, field_data_interp_y, field_data_interp_z = \
+    # field_data_interp[:,:,:,0,:], field_data_interp[:,:,:,1,:], field_data_interp[:,:,:,2,:]
     
     #"""
-    print("Computing mean of non-nan x displacement values")
-    field_data_interp_x = np.nanmean(field_data_interp_x, axis=-1, dtype=np.float32)
+    # print("Computing mean of non-nan x displacement values")
+    # field_data_interp_x = np.nanmean(field_data_interp_x, axis=-1, dtype=np.float32)
     #field_data_interp_x = np.nansum(field_data_interp_x, axis=-1)
     #field_data_interp_x = np.nanmedian(field_data_interp_x, axis=-1)
     #field_data_interp_x = np.nanmin(field_data_interp_x, axis=-1)
     #field_data_interp_x = np.nanmax(field_data_interp_x, axis=-1)
-    print("Computing mean of non-nan y displacement values")
-    field_data_interp_y = np.nanmean(field_data_interp_y, axis=-1, dtype=np.float32)
+    # print("Computing mean of non-nan y displacement values")
+    # field_data_interp_y = np.nanmean(field_data_interp_y, axis=-1, dtype=np.float32)
     #field_data_interp_y = np.nansum(field_data_interp_y, axis=-1)
     #field_data_interp_y = np.nanmedian(field_data_interp_y, axis=-1)
     #field_data_interp_y = np.nanmin(field_data_interp_y, axis=-1)
     #field_data_interp_y = np.nanmax(field_data_interp_y, axis=-1)
-    print("Computing mean of non-nan z displacement values")
-    field_data_interp_z = np.nanmean(field_data_interp_z, axis=-1, dtype=np.float32)
+    # print("Computing mean of non-nan z displacement values")
+    # field_data_interp_z = np.nanmean(field_data_interp_z, axis=-1, dtype=np.float32)
     #field_data_interp_z = np.nansum(field_data_interp_z, axis=-1)
     #field_data_interp_z = np.nanmedian(field_data_interp_z, axis=-1)
     #field_data_interp_z = np.nanmin(field_data_interp_z, axis=-1)
     #field_data_interp_z = np.nanmax(field_data_interp_z, axis=-1)
     
     # Stack the displacements together to make a field again
-    field_data_interp = np.stack((field_data_interp_x, field_data_interp_y, field_data_interp_z), axis=-1)
+    # field_data_interp = np.stack((field_data_interp_x, field_data_interp_y, field_data_interp_z), axis=-1)
     #"""
+
+    print("Computing mean of non-nan displacement values")
+    field_data_interp = np.divide(field_data_interp, num_of_elem_disp, out=np.zeros_like(field_data_interp),
+                                  where=num_of_elem_disp != 0)
     
     #print("Computing max of non-nan displacement values")
     #field_data_interp_max = np.nanmax(field_data_interp, axis=-1)
@@ -1047,13 +1061,19 @@ if __name__ == "__main__":
     #field_data_interp = field_data_interp_max
     #field_data_interp[-field_data_interp_min > field_data_interp_max] = field_data_interp_min[-field_data_interp_min > field_data_interp_max]
 
-    print("Computing mean of non-nan Gaussian values")
-    gaussian_data_interp = np.nanmean(gaussian_data_interp, axis=-1, dtype=np.float32)
+    # print("Computing mean of non-nan Gaussian values")
+    # gaussian_data_interp = np.nanmean(gaussian_data_interp, axis=-1, dtype=np.float32)
     #gaussian_data_interp = np.nansum(gaussian_data_interp, axis=-1)
     #gaussian_data_interp = np.nanmedian(gaussian_data_interp, axis=-1)
     #gaussian_data_interp = np.nanmin(gaussian_data_interp, axis=-1)
     #gaussian_data_interp = np.nanmax(gaussian_data_interp, axis=-1)
-    
+
+    print("Computing mean of non-nan Gaussian values")
+    gaussian_data_interp = np.divide(gaussian_data_interp, num_of_elem_gauss, out=np.zeros_like(gaussian_data_interp),
+                                     where=num_of_elem_gauss != 0)
+
+    # np.savez("../result_disp_gauss.npz", disp=field_data_interp, gauss=gaussian_data_interp)
+
     """
     print("Garbage collect again")
     gc.collect()
@@ -1061,12 +1081,12 @@ if __name__ == "__main__":
     """
     
     # Set nan values to 0
-    field_data_interp[np.isnan(field_data_interp)] = 0
+    # field_data_interp[np.isnan(field_data_interp)] = 0
     #print(np.unique(field_data_interp))
     #d = np.nanmean(field_data_interp, axis=-1, dtype=np.float32)
     #d = np.nanmean(field_data_interp, axis=-1)
     
-    gaussian_data_interp[np.isnan(gaussian_data_interp)] = 0
+    # gaussian_data_interp[np.isnan(gaussian_data_interp)] = 0
     
     # Smooth
     # NB! Gaussian smoothing like this will lower the extreme values (maximum absolute displacement)
