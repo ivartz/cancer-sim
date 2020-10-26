@@ -7,6 +7,7 @@ from scipy.ndimage import map_coordinates, gaussian_filter, binary_dilation
 import time
 # Perlin noise library: https://github.com/pvigier/perlin-numpy
 from perlin_numpy import generate_perlin_noise_3d
+import psutil
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -107,14 +108,8 @@ if __name__ == "__main__":
       default=5,
     )
     CLI.add_argument(
-      "--brain_coverage_fraction",
-      help="<0=brain coverage of displacements is local and the largest displacements are close to the tumor ellipsoid model inflection surface, 1=displacements will cover most of the brain. Maximum radial displacements will reach (or overreach, then scaled down) the end of the brain mask]",
-      type=float,
-      default=1,
-    )
-    CLI.add_argument(
       "--intensity_decay_fraction",
-      help="[0=intensities of displacements decay slowly along radial axes from the tumor ellipsoid model, 1=intensities of displacements decay rapidly along radial axes from the tumor ellipsoid model and the largest displacements are close to the tumor ellipsoid model inflection surface]. This parameter is dependent on brain_coverage_fraction",
+      help="[0=intensities of displacements decay slowly along radial axes from the tumor ellipsoid model, 1=intensities of displacements decay rapidly along radial axes from the tumor ellipsoid model and the largest displacements are close to the tumor original ellipsoid model inflection surface]",
       type=float,
       default=0.5,
     )
@@ -129,12 +124,6 @@ if __name__ == "__main__":
       help="The maximum angle (in degrees) between a normal vector on the model ellipsoid surface and field vectors allowed when determining a directional binary mask",
       type=int,
       default=7,
-    )
-    CLI.add_argument(
-      "--num_splits",
-      help="How many splits to perform of the displacement vector array before calculating directional binary masks. Internal parameter, increase if memory error",
-      type=int,
-      default=4,
     )
     CLI.add_argument(
       "--spline_order",
@@ -286,7 +275,6 @@ if __name__ == "__main__":
     # Printing input parameters
     print("Displacement: %f" % args.displacement)
     print("Normal Gaussian x-range: [-%f,%f]" % (-args.gaussian_range_one_sided, args.gaussian_range_one_sided))
-    print("Fraction of displacement coverage in the brain: %f" % args.brain_coverage_fraction)
     print("Fraction of displacement intensity decay within the displacement coverage in the brain: %f" % args.intensity_decay_fraction)
         
     # Insert the normalized gradients of the 3D Gaussian as displacement
@@ -352,8 +340,9 @@ if __name__ == "__main__":
     print("Number of normal vectors used: %i" % num_normal_displacement_vectors)
     
     # Number of splits of the normal vector array,
-    # to avoid large memory footprint when calculating dot products
-    num_splits = args.num_splits
+    # to avoid large memory usage when calculating dot products
+    calibration = 1317493504
+    num_splits = np.int(calibration*(num_vecs/psutil.virtual_memory()[1]))
     
     print("Maximum error angle allowed for directional binary masks [degrees]: %i" % args.angle_thr)
     print("Number of splits: %i" % num_splits)
@@ -437,11 +426,12 @@ if __name__ == "__main__":
     if args.verbose == 0:
         sys.stdout.write("]\n") # this ends the progress bar
     
-    print("Masking all directional binary masks with the outer ellipsoid mask")
-    bm *= np.expand_dims(outer_ellipsoid_data, axis=-1)
-    
     print("Cone computation execution time: %f s" %(time.time()-start_time))
-
+    
+    print("Masking all directional binary masks with the outer ellipsoid mask")
+    for i in range(num_normal_displacement_vectors):
+        bm[...,i] *= outer_ellipsoid_data
+    
     print("Number of directional masks calculated: %i" % bm.shape[-1])
     print("Saving directional binary masks to disk")
     """
@@ -454,24 +444,22 @@ if __name__ == "__main__":
     nib.save(bm_max_img, args.out+"/directional-binary-masks-max.nii.gz")
         
     # Create array to hold all original bounding boxes for directional binary masks
-    print("Making array for holding all bounding boxes for directional masks")
-    orig_bboxes_data = np.zeros(ref_img.shape+(num_normal_displacement_vectors,), dtype=np.int)
+    print("Making array for holding the union of all bounding boxes for directional masks")
+    orig_bboxes_data = np.zeros(ref_img.shape, dtype=np.int)
     
     # Create array to hold all bounding boxes for intepolated directional binary masks
-    print("Making array for holding all bounding boxes for intepolated directional masks")
-    interp_bboxes_data = np.zeros(ref_img.shape+(num_normal_displacement_vectors,), dtype=np.int)
+    print("Making array for holding the union of all bounding boxes for intepolated directional masks")
+    interp_bboxes_data = np.zeros(ref_img.shape, dtype=np.int)
     
     # Make the array for holding all intepolated displacement values
-    print("Making array for holding all intepolated displacement values")
-    f_shape = ref_img.shape + (3,)
-    field_data_interp = np.zeros(f_shape, dtype=np.float32)
-    num_of_elem_disp = np.zeros(f_shape, dtype=np.float32)
+    print("Making array for holding the final intepolated displacement values")
+    field_data_interp = np.zeros(ref_img.shape + (3,), dtype=np.float32)
+    num_of_elem_disp = np.zeros(ref_img.shape + (3,), dtype=np.float32)
     
     # Make the array for holding all intepolated gaussian values
-    print("Making array for holding all intepolated Gaussian values")
-    g_shape = ref_img.shape
-    gaussian_data_interp = np.zeros(g_shape, dtype=np.float32)
-    num_of_elem_gauss = np.zeros(g_shape, dtype=np.float32)
+    print("Making array for holding the final intepolated Gaussian values")
+    gaussian_data_interp = np.zeros(ref_img.shape, dtype=np.float32)
+    num_of_elem_gauss = np.zeros(ref_img.shape, dtype=np.float32)
     
     # Split the components of the displacement field into three 
     # scalar fields
@@ -486,10 +474,12 @@ if __name__ == "__main__":
         sys.stdout.flush()
         sys.stdout.write("\b" * (num_normal_displacement_vectors+1)) # return to start of line, after '['
     
-    # Make lists for dynamically appending parts of interpolated field and Gaussian in for loop.
+    # Make lists for dynamically appending parts of interpolated field and Gaussian in for loop
+    # as well ass the coordinates for the original bounding boxes.
     # (memory efficient)
     displacements = []
     gaussians = []
+    orig_bboxes_list = []
 
     # Start timer to measure the time used on the for loop
     start_time = time.time()
@@ -522,7 +512,7 @@ if __name__ == "__main__":
         # Get the directional binary mask corresponding to this
         # normal vector
         bmi = bm[...,i]
-                
+        
         # - Find the maximum displacement possible along the nv_d vector 
         # between its starting position and the end of the original
         # directional binary mask
@@ -572,16 +562,6 @@ if __name__ == "__main__":
         disp_max_brain = np.linalg.norm((p_max_brain-nv_c).astype(np.float32))
         if args.verbose == 1:
             print("Max displacement within brain mask along vector: %f" % disp_max_brain)
-        
-        # Scale the extent (by fraction) of the displacements reaching the end of the brain mask
-        disp_max_brain = args.brain_coverage_fraction*disp_max_brain
-        if args.verbose == 1:
-            print("Scaled max displacement within brain mask along vector: %f" % disp_max_brain)
-        
-        p_max_brain = (nv_c + disp_max_brain*nv_d).astype(np.int)
-        if args.verbose == 1:
-            print("Scaled max displaced coordinates within brain mask: ", end='')
-            print(p_max_brain)
         
         # Get the absolute values of original displacement field
         # within the original directionary mask
@@ -639,17 +619,22 @@ if __name__ == "__main__":
             if args.verbose == 1:
                 print("Finding bounding box for binary dilated directional mask extended for determining coordinates before interpolation")
             bm_geom_center, bm_widths = bounding_box_mask(binary_dilation(bmi_copy)) # NB! Binary dilation is performed to ensure complete coverage of the field
-            #bm_geom_center, bm_widths = bounding_box_mask(bmi_copy)
         else:
             # Find the geometric center of the directional
             # binary mask extended for determining coordinates before interpolation
             if args.verbose == 1:
                 print("Finding bounding box for binary dilated directional mask for determining coordinates before interpolation")
             bm_geom_center, bm_widths = bounding_box_mask(binary_dilation(bmi)) # NB! Binary dilation is performed to ensure complete coverage of the field
-            #bm_geom_center, bm_widths = bounding_box_mask(bmi)
         
         bmcx, bmcy, bmcz = bm_geom_center
         bmwx, bmwy, bmwz = bm_widths
+        
+        # Store the original bounding box coordinates in a sparse structure
+        bmc = [bmcx, bmcy, bmcz]
+        bmw = [bmwx, bmwy, bmwz]
+        coord = [(c - w // 2, c + w // 2) for c, w in
+                 zip(bmc, bmw)]  # tuple of start and end position for x, y and z
+        orig_bboxes_list.append(coord)
         
         # Making a copy of bmi to work on
         bmi_copy = bmi.copy()
@@ -693,23 +678,9 @@ if __name__ == "__main__":
         if args.verbose == 1:
             print("Finding bounding box for binary dilated directional mask extended for determining coordinates after interpolation")
         bm_geom_center_interp, bm_widths_interp = bounding_box_mask(binary_dilation(bmi_copy)) # NB! Binary dilation is performed to ensure complete coverage of the field
-        #bm_geom_center_interp, bm_widths_interp = bounding_box_mask(bmi_copy)
         
         bmcx_interp, bmcy_interp, bmcz_interp = bm_geom_center_interp
         bmwx_interp, bmwy_interp, bmwz_interp = bm_widths_interp
-        
-        # For diagnostics, store old and intepolated (stretched) bounding box
-        if args.verbose == 1:
-            print("Storing original and extended bounding boxes")
-        orig_bboxes_data[bmcx-bmwx//2:bmcx+bmwx//2, \
-                         bmcy-bmwy//2:bmcy+bmwy//2, \
-                         bmcz-bmwz//2:bmcz+bmwz//2, \
-                         i] = 1
-        
-        interp_bboxes_data[bmcx_interp-bmwx_interp//2:bmcx_interp+bmwx_interp//2, \
-                           bmcy_interp-bmwy_interp//2:bmcy_interp+bmwy_interp//2, \
-                           bmcz_interp-bmwz_interp//2:bmcz_interp+bmwz_interp//2, \
-                           i] = 1
         
         # Define a new grid for interpolation of points        
         xi, yi, zi = np.mgrid[bmcx-bmwx//2:bmcx+bmwx//2:bmwx_interp*1j, \
@@ -737,16 +708,17 @@ if __name__ == "__main__":
         if args.verbose == 1:
             print("Appending interpolated displacements and Gaussian as well as associated bounding box coordinates to lists")
 
-        # Store parts of the interpolated displacements and Gaussian with a sparse structure
-        bmc = [bmcx_interp, bmcy_interp, bmcz_interp]
-        bmw = [bmwx_interp, bmwy_interp, bmwz_interp]
-        coord = [(c - w // 2, c + w // 2) for c, w in
-                 zip(bmc, bmw)]  # tuple of start and end position for x, y and z
-        displacements.append((coord, np.stack([dxi, dyi, dzi], axis=-1)))
-        gaussians.append((coord, gaussian_data_interp_part))
+        # Store the interpolated displacements and Gaussian, 
+        # as well as their extended bounding box coordinates, in a sparse structure
+        bmc_interp = [bmcx_interp, bmcy_interp, bmcz_interp]
+        bmw_interp = [bmwx_interp, bmwy_interp, bmwz_interp]
+        coord_interp = [(c - w // 2, c + w // 2) for c, w in
+                 zip(bmc_interp, bmw_interp)]  # tuple of start and end position for x, y and z
+        displacements.append((coord_interp, np.stack([dxi, dyi, dzi], axis=-1)))
+        gaussians.append((coord_interp, gaussian_data_interp_part))
 
         if args.verbose == 1:
-            print("Appending done")
+            print("Append done")
         
         if args.verbose == 0:
             # Append to progress bar
@@ -759,12 +731,18 @@ if __name__ == "__main__":
     print("Interpolation execution time: %f s" %(time.time()-start_time))
     
     # Save old and intepolated (stretched) bounding box to disk
-    print("Saving bounding boxes for original directional binary masks to disk")
-    orig_bboxes_img = nib.spatialimages.SpatialImage(np.max(orig_bboxes_data, axis=-1), affine=ref_img.affine, header=ref_img.header)
+    print("Saving the union of bounding boxes for original directional binary masks to disk")
+    for c in orig_bboxes_list:
+        s = tuple((slice(*k) for k in c))
+        orig_bboxes_data[s] = 1
+    orig_bboxes_img = nib.spatialimages.SpatialImage(orig_bboxes_data, affine=ref_img.affine, header=ref_img.header)
     nib.save(orig_bboxes_img, args.out+"/original-bounding-box-vector-max.nii.gz")
     
-    print("Saving bounding boxes for intepolated directional binary masks to disk")
-    interp_bboxes_img = nib.spatialimages.SpatialImage(np.max(interp_bboxes_data, axis=-1), affine=ref_img.affine, header=ref_img.header)
+    print("Saving the union of bounding boxes for intepolated directional binary masks to disk")
+    for c, _ in gaussians:
+        s = tuple((slice(*k) for k in c))
+        interp_bboxes_data[s] = 1
+    interp_bboxes_img = nib.spatialimages.SpatialImage(interp_bboxes_data, affine=ref_img.affine, header=ref_img.header)
     nib.save(interp_bboxes_img, args.out+"/interp-bounding-box-vector-max.nii.gz")
     
     # Bounding box interpolation is now done.
@@ -817,35 +795,38 @@ if __name__ == "__main__":
         xsize_perlin = xsize - (xsize%resx)
         ysize_perlin = ysize - (ysize%resy)
         zsize_perlin = zsize - (zsize%resz)
+        
+        # The noise is attenuated with the interpolated (and smoothed) Gaussian
+        noisex = gaussian_data_interp.copy()
+        noisey = gaussian_data_interp.copy()
+        noisez = gaussian_data_interp.copy()
+        
         # Generate perlin noise
         print("Generating Perlin noise for x displacement")
         np.random.seed(random_seed)
-        noisex = \
+        noisex[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= \
         args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
         print("Generating Perlin noise for y displacement")
         np.random.seed(random_seed+1)
-        noisey = \
+        noisey[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= \
         args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
         print("Generating Perlin noise for z displacement")
         np.random.seed(random_seed+2)
-        noisez = \
+        noisez[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= \
         args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
         
-        # Scale noise with interpolated (and smoothed) Gaussian
-        # TODO
-        
         print("Adding perlin noise to original displacement field")
-        field_data[:xsize_perlin,:ysize_perlin,:zsize_perlin,0] += noisex
-        field_data[:xsize_perlin,:ysize_perlin,:zsize_perlin,1] += noisey
-        field_data[:xsize_perlin,:ysize_perlin,:zsize_perlin,2] += noisez
+        field_data[...,0] += noisex
+        field_data[...,1] += noisey
+        field_data[...,2] += noisez
         print("Adding perlin noise to interpolated displacement field")
-        field_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin,0] += noisex
-        field_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin,1] += noisey
-        field_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin,2] += noisez
+        field_data_interp[...,0] += noisex
+        field_data_interp[...,1] += noisey
+        field_data_interp[...,2] += noisez
         print("Computing absolute value of Perlin noise field")
         noisenorm = np.linalg.norm(np.stack((noisex, noisey, noisez), axis=-1), axis=-1)
         print("Adding perlin noise to interpolated Gaussian")
-        gaussian_data_interp[:xsize_perlin,:ysize_perlin,:zsize_perlin] += noisenorm
+        gaussian_data_interp += noisenorm
         
         # Save Perlin field
         print("Saving Perlin noise field")
