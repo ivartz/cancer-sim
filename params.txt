@@ -1,11 +1,11 @@
 displacement=4 8
 gaussian_range_one_sided=5
-brain_coverage_fraction=0.5 1
+brain_coverage_fraction=1
 intensity_decay_fraction=0 0.75
 num_vecs=64
 angle_thr=7
 num_splits=4
 spline_order=1
 smoothing_std=4
-perlin_noise_res=0.05 0.2 0.5
-perlin_noise_abs_max=0 0.3 0.9
+perlin_noise_res=0.05 0.08 0.1
+perlin_noise_abs_max=0 0.6
