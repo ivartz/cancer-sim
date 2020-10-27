@@ -782,6 +782,10 @@ if __name__ == "__main__":
     print("Smoothing interpolated Gaussian")
     gaussian_data_interp = gaussian_filter(gaussian_data_interp, sigma=args.smoothing_std)
     
+    # Normalize interpolated data, since the Gaussian smmoothing lowers or increased values
+    field_data_interp /= np.max(np.linalg.norm(field_data_interp, axis=-1))
+    gaussian_data_interp /= -np.min(gaussian_data_interp)
+    
     # Add noise to the interpolated field and Gaussian BEFORE scaling with specified displacement        
     if args.perlin_noise_abs_max > 0:
         # Perlin noise
@@ -797,41 +801,41 @@ if __name__ == "__main__":
         zsize_perlin = zsize - (zsize%resz)
         
         # The noise is attenuated with the interpolated (and smoothed) Gaussian
-        noisex = gaussian_data_interp.copy()
-        noisey = gaussian_data_interp.copy()
-        noisez = gaussian_data_interp.copy()
+        noisex = -gaussian_data_interp.copy()
+        noisey = -gaussian_data_interp.copy()
+        noisez = -gaussian_data_interp.copy()
         
         # Generate perlin noise
         print("Generating Perlin noise for x displacement")
         np.random.seed(random_seed)
         noisex[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= \
-        args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+        generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
         print("Generating Perlin noise for y displacement")
         np.random.seed(random_seed+1)
         noisey[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= \
-        args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+        generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
         print("Generating Perlin noise for z displacement")
         np.random.seed(random_seed+2)
         noisez[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= \
-        args.perlin_noise_abs_max*generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+        generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
         
-        print("Adding perlin noise to original displacement field")
-        field_data[...,0] += noisex
-        field_data[...,1] += noisey
-        field_data[...,2] += noisez
-        print("Adding perlin noise to interpolated displacement field")
-        field_data_interp[...,0] += noisex
-        field_data_interp[...,1] += noisey
-        field_data_interp[...,2] += noisez
+        noisefield = np.stack((noisex, noisey, noisez), axis=-1)
         print("Computing absolute value of Perlin noise field")
-        noisenorm = np.linalg.norm(np.stack((noisex, noisey, noisez), axis=-1), axis=-1)
+        noisenorm = np.linalg.norm(noisefield, axis=-1)
+        # Normalize noise vector field
+        noisefield /= np.max(noisenorm)
+        # Scale noise field using specified parameter
+        noisefield = args.perlin_noise_abs_max*noisefield
+
+        print("Adding perlin noise to interpolated displacement field")
+        field_data_interp += noisefield
         print("Adding perlin noise to interpolated Gaussian")
-        gaussian_data_interp += noisenorm
+        gaussian_data_interp -= np.linalg.norm(noisefield, axis=-1)
         
         # Save Perlin field
         print("Saving Perlin noise field")
         perlin_img = \
-        nib.spatialimages.SpatialImage(np.stack((noisex, noisey, noisez), axis=-1), affine=ref_img.affine, header=ref_img.header)
+        nib.spatialimages.SpatialImage(noisefield, affine=ref_img.affine, header=ref_img.header)
         nib.save(perlin_img, args.out+"/perlin-noise.nii.gz")
     
     # Finally, scale displacement fields with the specified intensity
