@@ -1,4 +1,4 @@
-#bash cancer-sim <ref> <tumormask> <brainmask> <disp> <grange> <idf> <vecs> <angle> <splo> <sm> <pres> <pabs> <odir>
+#bash cancer-sim.sh <ref> <tumormask> <brainmask> <disp> <grange> <idf> <vecs> <angle> <splo> <sm> <pres> <pabs> <odir>
 
 ref=$1
 tmask=$2
@@ -40,4 +40,4 @@ python3 cancer-displacement.py --ref $ref \
                                --out $odir \
                                --verbose 0
 
-bash displace-3d.sh $ref $ref $odir $disp
+bash convert-apply-transform.sh $ref $ref $odir $disp

@@ -1,9 +1,9 @@
 displacement=8
 gaussian_range_one_sided=5
-intensity_decay_fraction=0.75
-num_vecs=64
+intensity_decay_fraction=0.2
+num_vecs=32
 angle_thr=7
 spline_order=1
 smoothing_std=4
-perlin_noise_res=0.04
+perlin_noise_res=0.03
 perlin_noise_abs_max=0.6
