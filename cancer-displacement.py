@@ -51,7 +51,7 @@ def bounding_box_mask(mask):
     Returns the coodinates for the geometric center
     as well as x, y, and z widths of a binary mask,
     adjusted to an even number
-    """ 
+    """
     m1, m2, m3 = np.sum(mask, axis=(1,2)), np.sum(mask, axis=(0,2)), np.sum(mask, axis=(0,1))
     x_nonzeros = np.arange(m1.shape[0])[m1>0]
     y_nonzeros = np.arange(m2.shape[0])[m2>0]
@@ -270,6 +270,7 @@ if __name__ == "__main__":
     nib.save(outer_ellipsoid_img, args.out+"/outer-ellipsoid-mask.nii.gz")
     
     # - Displacement field
+    field_data_bbox = np.stack((dispx3d, dispy3d, dispz3d), axis=-1)
     field_data = np.zeros(ref_img.shape+(3,), dtype=np.float32)
     
     # Printing input parameters
@@ -279,9 +280,10 @@ if __name__ == "__main__":
         
     # Insert the normalized gradients of the 3D Gaussian as displacement
     # field vectors
-    field_data[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2, 0] = dispx3d
-    field_data[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2, 1] = dispy3d
-    field_data[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2, 2] = dispz3d
+    #field_data[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2, 0] = dispx3d
+    #field_data[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2, 1] = dispy3d
+    #field_data[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2, 2] = dispz3d
+    field_data[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2, :] = field_data_bbox
     
     # Compute more realistic displacement field using various extra information
     # 1. Scale displacement field using the brain mask.
@@ -293,6 +295,7 @@ if __name__ == "__main__":
     
     # Calculate the absolute value of the displacement, for using later
     dnorm = np.linalg.norm(field_data, axis=-1)
+    dnorm_bbox = np.linalg.norm(field_data_bbox, axis=-1)
     
     # - Normal ellipsoid mask
     # Calculate the norm of the current displacement vector field
@@ -341,8 +344,16 @@ if __name__ == "__main__":
     
     # Number of splits of the normal vector array,
     # to avoid large memory usage when calculating dot products
-    calibration = 1317493504
+    #"""
+    calibration = 1317493504*4 # Calibration based on free memory in the system. TODO: tune
     num_splits = np.int(calibration*(num_vecs/psutil.virtual_memory()[1]))
+    #"""
+    
+    #num_splits = 1 # TODO; increase this is memory explodes during cone computation
+    
+    # Avoid remainder when splitting
+    while num_normal_displacement_vectors % num_splits:
+        num_splits += 1
     
     print("Maximum error angle allowed for directional binary masks [degrees]: %i" % args.angle_thr)
     print("Number of splits: %i" % num_splits)
@@ -352,18 +363,20 @@ if __name__ == "__main__":
     print("Additive Perlin noise absolute of maximum noise: %f" % args.perlin_noise_abs_max)
     
     # Calculate the split size and remainder
-    split_size, remaining = divmod(num_normal_displacement_vectors, num_splits)
+    #split_size, remaining = divmod(num_normal_displacement_vectors, num_splits)
+    split_size = num_normal_displacement_vectors//num_splits
     
     print("Split size: %i" % split_size)
-    print("Remaining: %i" % remaining)
+    #print("Remaining: %i" % remaining)
     
     # Split normal vector array into these even splits and 
     # the last one containing the remaining ones if existing
     normal_displacement_vectors_to_split = normal_displacement_vectors[:num_splits*split_size]
-    normal_displacement_vectors_remaining = normal_displacement_vectors[-remaining:]
+    #normal_displacement_vectors_remaining = normal_displacement_vectors[-remaining:]
     
     # Create array to hold all directional binary masks
-    bm = np.zeros(ref_img.shape+(num_normal_displacement_vectors,), dtype=np.int)
+    #bm = np.zeros(ref_img.shape+(num_normal_displacement_vectors,), dtype=np.int)
+    bm = np.zeros(tumorbbox_widths+(num_normal_displacement_vectors,), dtype=np.int)
     
     print("Processing splits")
     
@@ -381,9 +394,9 @@ if __name__ == "__main__":
         if args.verbose == 1:
             print("Processing split %i/%i" % (split_num+1, num_splits))
         # Calculate the dot product between the field vectors and the normal vectors
-        d = np.dot(field_data, v.T)
+        d = np.dot(field_data_bbox, v.T)
         # The product of the norms of the field vectors and normal vectors
-        norms = np.expand_dims(dnorm, axis=-1)*np.linalg.norm(v, axis=-1)
+        norms = np.expand_dims(dnorm_bbox, axis=-1)*np.linalg.norm(v, axis=-1)
         # Calculate the deviation in degress between the field vectors and normal vectors
         deviation_degrees = np.rad2deg(np.arccos(d/norms))
         # Create a boolean mask of where there is less than or equal to 20 degrees 
@@ -399,6 +412,7 @@ if __name__ == "__main__":
             # Append to progress bar
             sys.stdout.write("-")
             sys.stdout.flush()
+    """
     # Iterate over the remaining normal vectors if existing
     if remaining:
         if args.verbose == 1:
@@ -422,6 +436,7 @@ if __name__ == "__main__":
             # Append to progress bar
             sys.stdout.write("-")
             sys.stdout.flush()
+    """
     
     if args.verbose == 0:
         sys.stdout.write("]\n") # this ends the progress bar
@@ -429,8 +444,9 @@ if __name__ == "__main__":
     print("Cone computation execution time: %f s" %(time.time()-start_time))
     
     print("Masking all directional binary masks with the outer ellipsoid mask")
-    for i in range(num_normal_displacement_vectors):
-        bm[...,i] *= outer_ellipsoid_data
+    #for i in range(num_normal_displacement_vectors):
+    #    bm[...,i] *= outer_ellipsoid_data
+    bm *= np.expand_dims(outer_ellipsoid_data_bbox, axis=-1)
     
     print("Number of directional masks calculated: %i" % bm.shape[-1])
     print("Saving directional binary masks to disk")
@@ -440,7 +456,9 @@ if __name__ == "__main__":
     nib.save(bm_img, "directional-binary-masks.nii.gz")
     """
     # As well as the max of the masks (=union)
-    bm_max_img = nib.spatialimages.SpatialImage(np.max(bm, axis=-1), affine=ref_img.affine, header=ref_img.header)
+    bm_unions_ref = np.zeros(ref_img.shape, dtype=np.int)
+    bm_unions_ref[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2] = np.max(bm, axis=-1)
+    bm_max_img = nib.spatialimages.SpatialImage(bm_unions_ref, affine=ref_img.affine, header=ref_img.header)
     nib.save(bm_max_img, args.out+"/directional-binary-masks-max.nii.gz")
         
     # Create array to hold all original bounding boxes for directional binary masks
@@ -473,6 +491,9 @@ if __name__ == "__main__":
         sys.stdout.write("[%s]" % (" " * num_normal_displacement_vectors))
         sys.stdout.flush()
         sys.stdout.write("\b" * (num_normal_displacement_vectors+1)) # return to start of line, after '['
+    
+    # Mask for holding the directional binary mask during the loop
+    bmi = np.zeros(ref_img.shape, dtype=np.int)
     
     # Make lists for dynamically appending parts of interpolated field and Gaussian in for loop
     # as well ass the coordinates for the original bounding boxes.
@@ -511,7 +532,9 @@ if __name__ == "__main__":
         
         # Get the directional binary mask corresponding to this
         # normal vector
-        bmi = bm[...,i]
+        #bmi = bm[...,i]
+        bmi[:] = 0
+        bmi[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2] = bm[...,i]
         
         # - Find the maximum displacement possible along the nv_d vector 
         # between its starting position and the end of the original
@@ -626,6 +649,9 @@ if __name__ == "__main__":
                 print("Finding bounding box for binary dilated directional mask for determining coordinates before interpolation")
             bm_geom_center, bm_widths = bounding_box_mask(binary_dilation(bmi)) # NB! Binary dilation is performed to ensure complete coverage of the field
         
+        if args.verbose == 1:
+            print("Done")
+        
         bmcx, bmcy, bmcz = bm_geom_center
         bmwx, bmwy, bmwz = bm_widths
         
@@ -678,6 +704,9 @@ if __name__ == "__main__":
         if args.verbose == 1:
             print("Finding bounding box for binary dilated directional mask extended for determining coordinates after interpolation")
         bm_geom_center_interp, bm_widths_interp = bounding_box_mask(binary_dilation(bmi_copy)) # NB! Binary dilation is performed to ensure complete coverage of the field
+        
+        if args.verbose == 1:
+            print("Done")
         
         bmcx_interp, bmcy_interp, bmcz_interp = bm_geom_center_interp
         bmwx_interp, bmwy_interp, bmwz_interp = bm_widths_interp
@@ -785,7 +814,7 @@ if __name__ == "__main__":
     # Normalize interpolated data, since the Gaussian smmoothing lowers or increased values
     field_data_interp /= np.max(np.linalg.norm(field_data_interp, axis=-1))
     gaussian_data_interp /= -np.min(gaussian_data_interp)
-    
+        
     # Add noise to the interpolated field and Gaussian BEFORE scaling with specified displacement        
     if args.perlin_noise_abs_max > 0:
         # Perlin noise
@@ -808,16 +837,20 @@ if __name__ == "__main__":
         # Generate perlin noise
         print("Generating Perlin noise for x displacement")
         np.random.seed(random_seed)
-        noisex[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= \
-        generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+        perlin_noise_data = generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+        #noisex[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= \
+        #generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+        noisex[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= perlin_noise_data
         print("Generating Perlin noise for y displacement")
-        np.random.seed(random_seed+1)
-        noisey[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= \
-        generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+        #np.random.seed(random_seed+1)
+        #noisey[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= \
+        #generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+        noisey[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= np.flip(perlin_noise_data, axis=1)
         print("Generating Perlin noise for z displacement")
-        np.random.seed(random_seed+2)
-        noisez[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= \
-        generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+        #np.random.seed(random_seed+2)
+        #noisez[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= \
+        #generate_perlin_noise_3d((xsize_perlin, ysize_perlin, zsize_perlin), (resx, resy, resz)).astype(np.float32)
+        noisez[:xsize_perlin,:ysize_perlin,:zsize_perlin] *= np.flip(perlin_noise_data, axis=2)
         
         noisefield = np.stack((noisex, noisey, noisez), axis=-1)
         print("Computing absolute value of Perlin noise field")

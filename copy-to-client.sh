@@ -9,13 +9,13 @@ client=$4
 if [ $client == "Achit" ]; then
     # Achit
     targetdir="/home/ivar/Desktop/C/Users/Ivar/Desktop/temp"
-    itksnapbin="ITK-SNAP.exe"
+    itksnapbin="/cygdrive/c/Program Files/ITK-SNAP 3.8/bin/ITK-SNAP.exe"
     alizabin="/cygdrive/c/Users/Ivar/aliza_1.98.18/aliza.exe"
     runcmd="cd /cygdrive/c/Users/Ivar/Desktop/temp && bash /cygdrive/c/Users/Ivar/Desktop/temp/open.sh"
 elif [ $client == "cube" ]; then
     # cube
     targetdir="/home/ivar/Desktop/C/Users/ivar/Desktop/temp"
-    itksnapbin="/cygdrive/c/Program Files/ITK-SNAP 3.8/bin/ITK-SNAP.exe"
+    itksnapbin="ITK-SNAP.exe"
     alizabin="/cygdrive/c/Users/ivar/aliza_1.98.32/aliza.exe"
     runcmd="cd /cygdrive/c/Users/ivar/Desktop/temp && bash /cygdrive/c/Users/ivar/Desktop/temp/open.sh"
 elif [ $client == "signatur" ]; then
