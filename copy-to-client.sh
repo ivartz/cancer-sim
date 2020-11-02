@@ -32,13 +32,12 @@ rm -v $targetdir/*.nii*
 
 echo "These files will be copied to the client machine:"
 
-du -sh $indir/2-T1c.nii.gz \
+du -sh $indir/T1c.nii.gz \
       $outdir/warped.nii.gz \
-      $input_data/3-T1c.nii.gz \
       $outdir/directional-binary-masks-max.nii.gz \
       $outdir/neg-field-${displacement}mm-ants.nii.gz \
       $outdir/interp-neg-field-${displacement}mm-ants.nii.gz \
-      $indir/2-Tumormask.nii.gz \
+      $indir/Segmentation.nii.gz \
       $outdir/gaussian.nii.gz \
       $outdir/perlin-noise.nii.gz \
       $outdir/interp-gaussian.nii.gz \
@@ -48,16 +47,15 @@ du -sh $indir/2-T1c.nii.gz \
       $outdir/interp-outer-ellipsoid-mask.nii.gz \
       $outdir/original-bounding-box-vector-max.nii.gz \
       $outdir/interp-bounding-box-vector-max.nii.gz \
-      $indir/2-BrainExtractionMask.nii.gz
+      $indir/BrainExtractionMask.nii.gz
 
 # Copy files
-cp -v $indir/2-T1c.nii.gz \
+cp -v $indir/T1c.nii.gz \
       $outdir/warped.nii.gz \
-      $indir/3-T1c.nii.gz \
       $outdir/directional-binary-masks-max.nii.gz \
       $outdir/neg-field-${displacement}mm-ants.nii.gz \
       $outdir/interp-neg-field-${displacement}mm-ants.nii.gz \
-      $indir/2-Tumormask.nii.gz \
+      $indir/Segmentation.nii.gz \
       $outdir/gaussian.nii.gz \
       $outdir/perlin-noise.nii.gz \
       $outdir/interp-gaussian.nii.gz \
@@ -67,15 +65,14 @@ cp -v $indir/2-T1c.nii.gz \
       $outdir/interp-outer-ellipsoid-mask.nii.gz \
       $outdir/original-bounding-box-vector-max.nii.gz \
       $outdir/interp-bounding-box-vector-max.nii.gz \
-      $indir/2-BrainExtractionMask.nii.gz $targetdir
+      $indir/BrainExtractionMask.nii.gz $targetdir
 
-echo '"'"$itksnapbin"'" -g 2-T1c.nii.gz \
+echo '"'"$itksnapbin"'" -g T1c.nii.gz \
       -o warped.nii.gz \
-      3-T1c.nii.gz \
       directional-binary-masks-max.nii.gz \
       neg-field-'"${displacement}"'mm-ants.nii.gz \
       interp-neg-field-'"${displacement}"'mm-ants.nii.gz \
-      2-Tumormask.nii.gz \
+      Segmentation.nii.gz \
       gaussian.nii.gz \
       perlin-noise.nii.gz \
       interp-gaussian.nii.gz \
@@ -85,16 +82,15 @@ echo '"'"$itksnapbin"'" -g 2-T1c.nii.gz \
       interp-outer-ellipsoid-mask.nii.gz \
       original-bounding-box-vector-max.nii.gz \
       interp-bounding-box-vector-max.nii.gz \
-      2-BrainExtractionMask.nii.gz &' > $targetdir/open.sh 
+      BrainExtractionMask.nii.gz &' > $targetdir/open.sh 
 
 echo '"'"$alizabin"'" \
-      2-T1c.nii.gz \
+      T1c.nii.gz \
       warped.nii.gz \
-      3-T1c.nii.gz \
       directional-binary-masks-max.nii.gz \
       neg-field-'"${displacement}"'mm-ants.nii.gz \
       interp-neg-field-'"${displacement}"'mm-ants.nii.gz \
-      2-Tumormask.nii.gz \
+      Segmentation.nii.gz \
       gaussian.nii.gz \
       perlin-noise.nii.gz \
       interp-gaussian.nii.gz \
@@ -104,7 +100,7 @@ echo '"'"$alizabin"'" \
       interp-outer-ellipsoid-mask.nii.gz \
       original-bounding-box-vector-max.nii.gz \
       interp-bounding-box-vector-max.nii.gz \
-      2-BrainExtractionMask.nii.gz &' >> $targetdir/open.sh
+      BrainExtractionMask.nii.gz &' >> $targetdir/open.sh
 
 echo "run this command in cygwin to open the files:"
 echo $runcmd
