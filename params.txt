@@ -5,5 +5,5 @@ num_vecs=32
 angle_thr=7
 spline_order=1
 smoothing_std=4
-perlin_noise_res=0.03 0.04
+perlin_noise_res=0.03 0.05
 perlin_noise_abs_max=0 0.6

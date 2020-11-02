@@ -81,19 +81,19 @@ if __name__ == "__main__":
       "--ref",
       help="Input 3D nifti for reference, for instance a structural MRI",
       type=str,
-      default="2-T1c.nii.gz",
+      default="T1c.nii.gz",
     )
     CLI.add_argument(
       "--tumormask",
-      help="A binary mask with 1=tumor tissue, 0=healthy (outside of tumor) tissue",
+      help="0=healthy (outside of tumor) tissue, anything else=a class of tumor tissue",
       type=str,
-      default="2-Tumormask.nii.gz",
+      default="Segmentation.nii.gz",
     )
     CLI.add_argument(
       "--brainmask",
       help="A binary mask with 1=brain tissue, 0=outside of the brain",
       type=str,
-      default="2-BrainExtractionMask.nii.gz",
+      default="BrainExtractionMask.nii.gz",
     )
     CLI.add_argument(
       "--displacement",
@@ -180,10 +180,14 @@ if __name__ == "__main__":
     
     xsize, ysize, zsize = ref_img.shape
     
+    # Transform tumormask to binary mask
+    tumormask_data = tumormask_img.get_fdata().astype(np.int)
+    tumormask_data[np.nonzero(tumormask_data)] = 1
+    
     # Find the bounding box and geometric center
     # of the tumor based on the tumor mask
     tumorbbox_geom_center, tumorbbox_widths = \
-    bounding_box_mask(tumormask_img.get_fdata().astype(np.int))
+    bounding_box_mask(tumormask_data)
     cx, cy, cz = tumorbbox_geom_center
     wx, wy, wz = tumorbbox_widths
     
@@ -289,9 +293,9 @@ if __name__ == "__main__":
     
     # Compute more realistic displacement field using various extra information
     # 1. Scale displacement field using the brain mask.
-    brainmask_data = brainmask_img.get_fdata()
+    brainmask_data = brainmask_img.get_fdata().astype(np.int)
     # TODO: Remove the below line when brainmask_img is binary.
-    brainmask_data[brainmask_data != 1] = 0 # Note this mask was not binary, making it binary.
+    #brainmask_data[brainmask_data != 1] = 0 # Note this mask was not binary, making it binary.
     #mask_img = nib.spatialimages.SpatialImage(brainmask_data, affine=ref_img.affine, header=ref_img.header)
     #nib.save(mask_img, args.out+"/brainmask-binary.nii.gz")
     
