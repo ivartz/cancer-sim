@@ -1,6 +1,6 @@
 displacement=3 8
 gaussian_range_one_sided=5
-intensity_decay_fraction=0.2 1
+intensity_decay_fraction=0.1 1
 num_vecs=32
 angle_thr=7
 spline_order=1

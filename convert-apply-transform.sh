@@ -1,4 +1,5 @@
 #bash convert-apply-transform.sh inimg refimg results <displacement>
+scriptdir=$(dirname $0)
 input=$1
 ref=$2
 resdir=$3
@@ -7,13 +8,13 @@ LC_ALL=C printf -v displacement %.1f $4 # Format the float input to string with 
 START=$(date +%s)
 
 # Interpolated positive field
-bash converttoantstransform.sh $resdir/interp-field-${displacement}mm.nii.gz $resdir/interp-field-${displacement}mm-ants.nii.gz
+bash $scriptdir/converttoantstransform.sh $resdir/interp-field-${displacement}mm.nii.gz $resdir/interp-field-${displacement}mm-ants.nii.gz
 
 # Interpolated negative field
-bash converttoantstransform.sh $resdir/interp-neg-field-${displacement}mm.nii.gz $resdir/interp-neg-field-${displacement}mm-ants.nii.gz
+bash $scriptdir/converttoantstransform.sh $resdir/interp-neg-field-${displacement}mm.nii.gz $resdir/interp-neg-field-${displacement}mm-ants.nii.gz
 
 # Original negative field
-bash converttoantstransform.sh $resdir/neg-field-${displacement}mm.nii.gz $resdir/neg-field-${displacement}mm-ants.nii.gz
+bash $scriptdir/converttoantstransform.sh $resdir/neg-field-${displacement}mm.nii.gz $resdir/neg-field-${displacement}mm-ants.nii.gz
 
 # Use interpolated positive field to displace the MRI
 antsApplyTransforms --dimensionality 3 \

@@ -1,5 +1,6 @@
 #bash cancer-sim.sh <ref> <tumormask> <brainmask> <disp> <grange> <idf> <vecs> <angle> <splo> <sm> <pres> <pabs> <odir>
 
+scriptdir=$(dirname $0)
 ref=$1
 tmask=$2
 bmask=$3
@@ -25,7 +26,7 @@ echo "smoothing_std=$sm" >> $odir/params.txt
 echo "perlin_noise_res=$pres" >> $odir/params.txt
 echo "perlin_noise_abs_max=$pabs" >> $odir/params.txt
 
-python3 cancer-displacement.py --ref $ref \
+python3 $scriptdir/cancer-displacement.py --ref $ref \
                                --tumormask $tmask \
                                --brainmask $bmask \
                                --displacement $disp \
@@ -40,4 +41,4 @@ python3 cancer-displacement.py --ref $ref \
                                --out $odir \
                                --verbose 0
 
-bash convert-apply-transform.sh $ref $ref $odir $disp
+bash $scriptdir/convert-apply-transform.sh $ref $ref $odir $disp

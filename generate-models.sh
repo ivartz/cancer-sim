@@ -5,6 +5,7 @@ bash generate-models.sh <param-space.txt> <ref> <tumormask> <brainmask> <mdir>
 
 bash generate-models.sh params.txt 2-T1c.nii.gz 2-Tumormask.nii.gz 2-BrainExtractionMask.nii.gz /mnt/HDD3TB/derivatives/cancer-sim-1 2>&1 | tee /mnt/HDD3TB/derivatives/cancer-sim-1/runlog.txt
 '
+scriptdir=$(dirname $0)
 params=$1
 ref=$2
 tmask=$3
@@ -81,7 +82,7 @@ for disp in ${displacement[*]}; do
                                 # Create output folder
                                 mkdir -p $mdir/$ofname
                                 
-                                runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname)
+                                runcmd=$(printf "bash $scriptdir/cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname)
                                 echo $runcmd
                                 eval $runcmd
                                 
@@ -108,7 +109,7 @@ for disp in ${displacement[*]}; do
                                             # Create output folder
                                             mkdir -p $mdir/$ofname
                                             
-                                            runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname)
+                                            runcmd=$(printf "bash $scriptdir/cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname)
                                             echo $runcmd
                                             eval $runcmd
                                             
@@ -127,7 +128,7 @@ for disp in ${displacement[*]}; do
                                                 # Create output folder
                                                 mkdir -p $mdir/$ofname
                                                 
-                                                runcmd=$(printf "bash cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname)
+                                                runcmd=$(printf "bash $scriptdir/cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname)
                                                 echo $runcmd
                                                 eval $runcmd
                                                 
