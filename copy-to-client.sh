@@ -15,7 +15,7 @@ if [ $client == "Achit" ]; then
 elif [ $client == "cube" ]; then
     # cube
     targetdir="/home/ivar/Desktop/C/Users/ivar/Desktop/temp"
-    itksnapbin="ITK-SNAP.exe"
+    itksnapbin="/cygdrive/c/Program Files/ITK-SNAP 3.8/bin/ITK-SNAP.exe"
     alizabin="/cygdrive/c/Users/ivar/aliza_1.98.32/aliza.exe"
     runcmd="cd /cygdrive/c/Users/ivar/Desktop/temp && bash /cygdrive/c/Users/ivar/Desktop/temp/open.sh"
 elif [ $client == "signatur" ]; then
