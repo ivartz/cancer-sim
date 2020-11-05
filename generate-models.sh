@@ -16,6 +16,10 @@ mdir=$5
 mkdircmd="mkdir -p $mdir"
 eval $mkdircmd
 
+# Copy reference image, tumor mask and brain mask to model directory
+cpcmd="cp $ref $mdir $tmask $mdir $bmask $mdir"
+eval $cpcmd
+
 # Log the repository version
 echo "https://github.com/ivartz/cancer-sim/commits/master" > $mdir/cancer-sim-version.txt
 # shortened hash
