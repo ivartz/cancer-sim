@@ -3,7 +3,7 @@ scriptdir=$(dirname $0)
 input=$1
 ref=$2
 resdir=$3
-LC_ALL=C printf -v displacement %.1f $4 # Format the float input to string with one decimal and always use . as the decimal separator
+LC_ALL=C printf -v displacement %.2f $4 # Format the float input to string with one decimal and always use . as the decimal separator
 
 START=$(date +%s)
 

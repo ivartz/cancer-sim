@@ -91,7 +91,7 @@ for disp in ${displacement[*]}; do
                                 mkdir -p $mdir/$ofname
                                 
                                 runcmd=$(printf "bash $scriptdir/cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname)
-                                echo $runcmd
+                                #echo $runcmd
                                 eval $runcmd
                                 
                                 idx=$((idx+1))
@@ -118,7 +118,7 @@ for disp in ${displacement[*]}; do
                                             mkdir -p $mdir/$ofname
                                             
                                             runcmd=$(printf "bash $scriptdir/cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname)
-                                            echo $runcmd
+                                            #echo $runcmd
                                             eval $runcmd
                                             
                                             idx=$((idx+1))
@@ -137,7 +137,7 @@ for disp in ${displacement[*]}; do
                                                 mkdir -p $mdir/$ofname
                                                 
                                                 runcmd=$(printf "bash $scriptdir/cancer-sim.sh %s %s %s %s %s %s %s %s %s %s %s %s %s" $ref $tmask $bmask $disp $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname)
-                                                echo $runcmd
+                                                #echo $runcmd
                                                 eval $runcmd
                                                 
                                                 idx=$((idx+1))

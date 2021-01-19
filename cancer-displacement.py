@@ -1043,22 +1043,22 @@ if __name__ == "__main__":
         if args.verbose > 0:
             print("Saving original fields")
         field_img = nib.spatialimages.SpatialImage(field_data, affine=ref_img.affine, header=ref_img.header)
-        nib.save(field_img, args.out+"/field-"+str(args.displacement)+"mm.nii.gz")
+        nib.save(field_img, args.out+"/field-"+"{:.2f}".format(args.displacement)+"mm.nii.gz")
         
         # Also save the negative of the field (since ITK-SNAP needs the negative visualize correctly)
         field_oppos_img = nib.spatialimages.SpatialImage(-field_data, affine=ref_img.affine, header=ref_img.header)
-        nib.save(field_oppos_img, args.out+"/neg-field-"+str(args.displacement)+"mm.nii.gz")
+        nib.save(field_oppos_img, args.out+"/neg-field-"+"{:.2f}".format(args.displacement)+"mm.nii.gz")
     
     # Save intepolated field
     if args.verbose > 0:
         print("Saving interpolated fields and Gaussian")
     field_img_interp = nib.spatialimages.SpatialImage(field_data_interp, affine=ref_img.affine, header=ref_img.header)
-    nib.save(field_img_interp, args.out+"/interp-field-"+str(args.displacement)+"mm.nii.gz")
+    nib.save(field_img_interp, args.out+"/interp-field-"+"{:.2f}".format(args.displacement)+"mm.nii.gz")
     
     if args.minimal_output < 1:
         # Also save the negative of the field (since ITK-SNAP needs the negative visualize correctly)
         field_oppos_img_interp = nib.spatialimages.SpatialImage(-field_data_interp, affine=ref_img.affine, header=ref_img.header)
-        nib.save(field_oppos_img_interp, args.out+"/interp-neg-field-"+str(args.displacement)+"mm.nii.gz")
+        nib.save(field_oppos_img_interp, args.out+"/interp-neg-field-"+"{:.2f}".format(args.displacement)+"mm.nii.gz")
         
         gaussian_img_interp = \
         nib.spatialimages.SpatialImage(-gaussian_data_interp, affine=ref_img.affine, header=ref_img.header)
