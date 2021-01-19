@@ -157,6 +157,12 @@ if __name__ == "__main__":
       default="results",
     )
     CLI.add_argument(
+      "--forward_field_only",
+      help="0: Save all model outputs in output directory, 1: Only save the final interpolated forward-in-time (positive) displacement field in output directory",
+      type=int,
+      default=0,
+    )
+    CLI.add_argument(
       "--verbose",
       help="0: Print no messages, 1: Print overall messages, 2: Print detailed messages",
       type=int,
@@ -218,10 +224,11 @@ if __name__ == "__main__":
     gaussian_data = np.zeros(ref_img.shape, dtype=np.float32)
     gaussian_data[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2] = g3d
     
-    # Save the 3D Gaussian to nifti
-    gaussian_img = \
-    nib.spatialimages.SpatialImage(-gaussian_data, affine=ref_img.affine, header=ref_img.header)
-    nib.save(gaussian_img, args.out+"/gaussian.nii.gz")
+    if args.forward_field_only < 1:
+        # Save the 3D Gaussian to nifti
+        gaussian_img = \
+        nib.spatialimages.SpatialImage(-gaussian_data, affine=ref_img.affine, header=ref_img.header)
+        nib.save(gaussian_img, args.out+"/gaussian.nii.gz")
     
     # - 3D Gaussian gradients
     # The normalized partial derivatives of the 3D Gaussian are used 
@@ -253,11 +260,12 @@ if __name__ == "__main__":
     ellipsoid_data_bbox[ellipsoid_mask] = 1
     ellipsoid_data = np.zeros(ref_img.shape, dtype=np.int)
     ellipsoid_data[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2] = ellipsoid_data_bbox
-    
-    # Save the mask to nifti
-    ellipsoid_img = \
-    nib.spatialimages.SpatialImage(ellipsoid_data, affine=ref_img.affine, header=ref_img.header)
-    nib.save(ellipsoid_img, args.out+"/ellipsoid-mask.nii.gz")
+
+    if args.forward_field_only < 1:
+        # Save the mask to nifti
+        ellipsoid_img = \
+        nib.spatialimages.SpatialImage(ellipsoid_data, affine=ref_img.affine, header=ref_img.header)
+        nib.save(ellipsoid_img, args.out+"/ellipsoid-mask.nii.gz")
     
     # - Outer ellipsoid mask
     # Create a mask of an ellipsoid where its
@@ -269,10 +277,11 @@ if __name__ == "__main__":
     outer_ellipsoid_data = np.zeros(ref_img.shape, dtype=np.int)
     outer_ellipsoid_data[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2] = outer_ellipsoid_data_bbox
     
-    # Save the mask to nifti
-    outer_ellipsoid_img = \
-    nib.spatialimages.SpatialImage(outer_ellipsoid_data, affine=ref_img.affine, header=ref_img.header)
-    nib.save(outer_ellipsoid_img, args.out+"/outer-ellipsoid-mask.nii.gz")
+    if args.forward_field_only < 1:
+        # Save the mask to nifti
+        outer_ellipsoid_img = \
+        nib.spatialimages.SpatialImage(outer_ellipsoid_data, affine=ref_img.affine, header=ref_img.header)
+        nib.save(outer_ellipsoid_img, args.out+"/outer-ellipsoid-mask.nii.gz")
     
     # - Displacement field
     field_data_bbox = np.stack((dispx3d, dispy3d, dispz3d), axis=-1)
@@ -311,14 +320,15 @@ if __name__ == "__main__":
     fabs[fabs <= 0.99] = 0
     fabs_max_mask = fabs != 0
     
-    # This normal ellipsoid is the same as the inner ellipsoid, 
-    # but with its volume (contents) set to 0 and only a with a thin (~ voxel)
-    # surface remaining.
-    # Save the normal ellipsoid mask
-    normal_ellipsoid_data = np.zeros(ref_img.shape, dtype=np.int)
-    normal_ellipsoid_data[fabs_max_mask] = 1
-    normal_ellipsoid_img = nib.spatialimages.SpatialImage(normal_ellipsoid_data, affine=ref_img.affine, header=ref_img.header)
-    nib.save(normal_ellipsoid_img, args.out+"/normal-ellipsoid-mask.nii.gz")
+    if args.forward_field_only < 1:
+        # This normal ellipsoid is the same as the inner ellipsoid,
+        # but with its volume (contents) set to 0 and only a with a thin (~ voxel)
+        # surface remaining.
+        # Save the normal ellipsoid mask
+        normal_ellipsoid_data = np.zeros(ref_img.shape, dtype=np.int)
+        normal_ellipsoid_data[fabs_max_mask] = 1
+        normal_ellipsoid_img = nib.spatialimages.SpatialImage(normal_ellipsoid_data, affine=ref_img.affine, header=ref_img.header)
+        nib.save(normal_ellipsoid_img, args.out+"/normal-ellipsoid-mask.nii.gz")
         
     # Find the (normal) displacement vector components and coordinates
     # for normal ellipsoid mask
@@ -462,17 +472,19 @@ if __name__ == "__main__":
     if args.verbose > 0:
         print("Number of directional masks calculated: %i" % bm.shape[-1])
         print("Saving directional binary masks to disk")
-    """
-    # Save all directional binary masks as a 4D nifti
-    bm_img = nib.spatialimages.SpatialImage(bm, affine=ref_img.affine, header=ref_img.header)
-    nib.save(bm_img, "directional-binary-masks.nii.gz")
-    """
-    # As well as the max of the masks (=union)
-    bm_unions_ref = np.zeros(ref_img.shape, dtype=np.int)
-    bm_unions_ref[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2] = np.max(bm, axis=-1)
-    bm_max_img = nib.spatialimages.SpatialImage(bm_unions_ref, affine=ref_img.affine, header=ref_img.header)
-    nib.save(bm_max_img, args.out+"/directional-binary-masks-max.nii.gz")
-        
+    
+    if args.forward_field_only < 1:
+        """
+        # Save all directional binary masks as a 4D nifti
+        bm_img = nib.spatialimages.SpatialImage(bm, affine=ref_img.affine, header=ref_img.header)
+        nib.save(bm_img, "directional-binary-masks.nii.gz")
+        """
+        # As well as the max of the masks (=union)
+        bm_unions_ref = np.zeros(ref_img.shape, dtype=np.int)
+        bm_unions_ref[cx-wx//2:cx+wx//2, cy-wy//2:cy+wy//2, cz-wz//2:cz+wz//2] = np.max(bm, axis=-1)
+        bm_max_img = nib.spatialimages.SpatialImage(bm_unions_ref, affine=ref_img.affine, header=ref_img.header)
+        nib.save(bm_max_img, args.out+"/directional-binary-masks-max.nii.gz")
+    
     # Create array to hold all original bounding boxes for directional binary masks
     if args.verbose > 0:
         print("Making array for holding the union of all bounding boxes for directional masks")
@@ -778,22 +790,23 @@ if __name__ == "__main__":
     if args.verbose > 0:
         print("Interpolation execution time: %f s" %(time.time()-start_time))
     
-    # Save old and intepolated (stretched) bounding box to disk
-    if args.verbose > 0:
-        print("Saving the union of bounding boxes for original directional binary masks to disk")
-    for c in orig_bboxes_list:
-        s = tuple((slice(*k) for k in c))
-        orig_bboxes_data[s] = 1
-    orig_bboxes_img = nib.spatialimages.SpatialImage(orig_bboxes_data, affine=ref_img.affine, header=ref_img.header)
-    nib.save(orig_bboxes_img, args.out+"/original-bounding-box-vector-max.nii.gz")
-    
-    if args.verbose > 0:
-        print("Saving the union of bounding boxes for intepolated directional binary masks to disk")
-    for c, _ in gaussians:
-        s = tuple((slice(*k) for k in c))
-        interp_bboxes_data[s] = 1
-    interp_bboxes_img = nib.spatialimages.SpatialImage(interp_bboxes_data, affine=ref_img.affine, header=ref_img.header)
-    nib.save(interp_bboxes_img, args.out+"/interp-bounding-box-vector-max.nii.gz")
+    if args.forward_field_only < 1:
+        # Save old and intepolated (stretched) bounding box to disk
+        if args.verbose > 0:
+            print("Saving the union of bounding boxes for original directional binary masks to disk")
+        for c in orig_bboxes_list:
+            s = tuple((slice(*k) for k in c))
+            orig_bboxes_data[s] = 1
+        orig_bboxes_img = nib.spatialimages.SpatialImage(orig_bboxes_data, affine=ref_img.affine, header=ref_img.header)
+        nib.save(orig_bboxes_img, args.out+"/original-bounding-box-vector-max.nii.gz")
+        
+        if args.verbose > 0:
+            print("Saving the union of bounding boxes for intepolated directional binary masks to disk")
+        for c, _ in gaussians:
+            s = tuple((slice(*k) for k in c))
+            interp_bboxes_data[s] = 1
+        interp_bboxes_img = nib.spatialimages.SpatialImage(interp_bboxes_data, affine=ref_img.affine, header=ref_img.header)
+        nib.save(interp_bboxes_img, args.out+"/interp-bounding-box-vector-max.nii.gz")
     
     # Bounding box interpolation is now done.
     if args.verbose > 0:
@@ -901,12 +914,13 @@ if __name__ == "__main__":
             print("Adding perlin noise to interpolated Gaussian")
         gaussian_data_interp -= np.linalg.norm(noisefield, axis=-1)
         
-        # Save Perlin field
-        if args.verbose > 0:
-            print("Saving Perlin noise field")
-        perlin_img = \
-        nib.spatialimages.SpatialImage(noisefield, affine=ref_img.affine, header=ref_img.header)
-        nib.save(perlin_img, args.out+"/perlin-noise.nii.gz")
+        if args.forward_field_only < 1:
+            # Save Perlin field
+            if args.verbose > 0:
+                print("Saving Perlin noise field")
+            perlin_img = \
+            nib.spatialimages.SpatialImage(noisefield, affine=ref_img.affine, header=ref_img.header)
+            nib.save(perlin_img, args.out+"/perlin-noise.nii.gz")
     
     # Finally, scale displacement fields with the specified intensity
     if args.verbose > 0:
@@ -922,12 +936,14 @@ if __name__ == "__main__":
     ellipsoid_mask_interp = gaussian_data_interp < -ellipsoid_threshold
     ellipsoid_data_interp = np.zeros(gaussian_data_interp.shape, dtype=np.int)
     ellipsoid_data_interp[ellipsoid_mask_interp] = 1
-    # Save the mask to nifti
-    if args.verbose > 0:
-        print("Saving interpolated ellipsoid mask")
-    ellipsoid_img_interp = \
-    nib.spatialimages.SpatialImage(ellipsoid_data_interp, affine=ref_img.affine, header=ref_img.header)
-    nib.save(ellipsoid_img_interp, args.out+"/interp-ellipsoid-mask.nii.gz")
+
+    if args.forward_field_only < 1:
+        # Save the mask to nifti
+        if args.verbose > 0:
+            print("Saving interpolated ellipsoid mask")
+        ellipsoid_img_interp = \
+        nib.spatialimages.SpatialImage(ellipsoid_data_interp, affine=ref_img.affine, header=ref_img.header)
+        nib.save(ellipsoid_img_interp, args.out+"/interp-ellipsoid-mask.nii.gz")
     
     # - Interpolated outer ellipsoid mask
     # Create a mask of an ellipsoid where its
@@ -937,13 +953,14 @@ if __name__ == "__main__":
     outer_ellipsoid_data_interp = np.zeros(gaussian_data_interp.shape, dtype=np.int)
     outer_ellipsoid_data_interp[outer_ellipsoid_mask_interp] = 1
     
-    # Save the mask to nifti
-    if args.verbose > 0:
-        print("Saving interpolated outer ellipsoid mask")
-    outer_ellipsoid_img_interp = \
-    nib.spatialimages.SpatialImage(outer_ellipsoid_data_interp, affine=ref_img.affine, header=ref_img.header)
-    nib.save(outer_ellipsoid_img_interp, args.out+"/interp-outer-ellipsoid-mask.nii.gz")
-        
+    if args.forward_field_only < 1:
+        # Save the mask to nifti
+        if args.verbose > 0:
+            print("Saving interpolated outer ellipsoid mask")
+        outer_ellipsoid_img_interp = \
+        nib.spatialimages.SpatialImage(outer_ellipsoid_data_interp, affine=ref_img.affine, header=ref_img.header)
+        nib.save(outer_ellipsoid_img_interp, args.out+"/interp-outer-ellipsoid-mask.nii.gz")
+    
     # Remove displacements from bounding boxes starting from outside of the brain
     field_data[brainmask_data != 1] = 0
     field_data_interp[brainmask_data != 1] = 0
@@ -1019,15 +1036,16 @@ if __name__ == "__main__":
         field_data_interp[brainmask_data == 1] = dinterpmask
     # Restrict displacements leaving the brain END
     
-    # Save original (non-intepolated) field
-    if args.verbose > 0:
-        print("Saving original fields")
-    field_img = nib.spatialimages.SpatialImage(field_data, affine=ref_img.affine, header=ref_img.header)
-    nib.save(field_img, args.out+"/field-"+str(args.displacement)+"mm.nii.gz")
-    
-    # Also save the negative of the field (since ITK-SNAP needs the negative visualize correctly)
-    field_oppos_img = nib.spatialimages.SpatialImage(-field_data, affine=ref_img.affine, header=ref_img.header)
-    nib.save(field_oppos_img, args.out+"/neg-field-"+str(args.displacement)+"mm.nii.gz")
+    if args.forward_field_only < 1:
+        # Save original (non-intepolated) field
+        if args.verbose > 0:
+            print("Saving original fields")
+        field_img = nib.spatialimages.SpatialImage(field_data, affine=ref_img.affine, header=ref_img.header)
+        nib.save(field_img, args.out+"/field-"+str(args.displacement)+"mm.nii.gz")
+        
+        # Also save the negative of the field (since ITK-SNAP needs the negative visualize correctly)
+        field_oppos_img = nib.spatialimages.SpatialImage(-field_data, affine=ref_img.affine, header=ref_img.header)
+        nib.save(field_oppos_img, args.out+"/neg-field-"+str(args.displacement)+"mm.nii.gz")
     
     # Save intepolated field
     if args.verbose > 0:
@@ -1035,13 +1053,14 @@ if __name__ == "__main__":
     field_img_interp = nib.spatialimages.SpatialImage(field_data_interp, affine=ref_img.affine, header=ref_img.header)
     nib.save(field_img_interp, args.out+"/interp-field-"+str(args.displacement)+"mm.nii.gz")
     
-    # Also save the negative of the field (since ITK-SNAP needs the negative visualize correctly)
-    field_oppos_img_interp = nib.spatialimages.SpatialImage(-field_data_interp, affine=ref_img.affine, header=ref_img.header)
-    nib.save(field_oppos_img_interp, args.out+"/interp-neg-field-"+str(args.displacement)+"mm.nii.gz")
+    if args.forward_field_only < 1:
+        # Also save the negative of the field (since ITK-SNAP needs the negative visualize correctly)
+        field_oppos_img_interp = nib.spatialimages.SpatialImage(-field_data_interp, affine=ref_img.affine, header=ref_img.header)
+        nib.save(field_oppos_img_interp, args.out+"/interp-neg-field-"+str(args.displacement)+"mm.nii.gz")
+        
+        gaussian_img_interp = \
+        nib.spatialimages.SpatialImage(-gaussian_data_interp, affine=ref_img.affine, header=ref_img.header)
+        nib.save(gaussian_img_interp, args.out+"/interp-gaussian.nii.gz")
     
-    gaussian_img_interp = \
-    nib.spatialimages.SpatialImage(-gaussian_data_interp, affine=ref_img.affine, header=ref_img.header)
-    nib.save(gaussian_img_interp, args.out+"/interp-gaussian.nii.gz")
-
     print("Script execution time: %i s" % np.int(time.time()-script_start_time))
     print(sys.argv[0] + " done")

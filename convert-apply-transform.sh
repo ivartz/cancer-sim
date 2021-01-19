@@ -11,10 +11,10 @@ START=$(date +%s)
 bash $scriptdir/converttoantstransform.sh $resdir/interp-field-${displacement}mm.nii.gz $resdir/interp-field-${displacement}mm-ants.nii.gz
 
 # Interpolated negative field
-bash $scriptdir/converttoantstransform.sh $resdir/interp-neg-field-${displacement}mm.nii.gz $resdir/interp-neg-field-${displacement}mm-ants.nii.gz
+#bash $scriptdir/converttoantstransform.sh $resdir/interp-neg-field-${displacement}mm.nii.gz $resdir/interp-neg-field-${displacement}mm-ants.nii.gz
 
 # Original negative field
-bash $scriptdir/converttoantstransform.sh $resdir/neg-field-${displacement}mm.nii.gz $resdir/neg-field-${displacement}mm-ants.nii.gz
+#bash $scriptdir/converttoantstransform.sh $resdir/neg-field-${displacement}mm.nii.gz $resdir/neg-field-${displacement}mm-ants.nii.gz
 
 # Use interpolated positive field to displace the MRI
 antsApplyTransforms --dimensionality 3 \

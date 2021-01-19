@@ -17,7 +17,11 @@ mkdircmd="mkdir -p $mdir"
 eval $mkdircmd
 
 # Copy reference image, tumor mask and brain mask to model directory
-cpcmd="cp $ref $mdir $tmask $mdir $bmask $mdir"
+cpcmd="cp $ref $mdir"
+eval $cpcmd
+cpcmd="cp $tmask $mdir"
+eval $cpcmd
+cpcmd="cp $bmask $mdir"
 eval $cpcmd
 
 # Log the repository version

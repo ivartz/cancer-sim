@@ -39,6 +39,7 @@ python3 $scriptdir/cancer-displacement.py --ref $ref \
                                --perlin_noise_res $pres \
                                --perlin_noise_abs_max $pabs \
                                --out $odir \
+                               --forward_field_only 1 \
                                --verbose 0
 
 bash $scriptdir/convert-apply-transform.sh $ref $ref $odir $disp
