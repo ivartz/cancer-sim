@@ -16,7 +16,7 @@ pabs=${12}
 odir=${13}
 
 # Store the parameters used
-echo "displacement=$disp" > $odir/params.txt
+echo "displacement="$disp"" > $odir/params.txt
 echo "gaussian_range_one_sided=$grange" >> $odir/params.txt
 echo "intensity_decay_fraction=$idf" >> $odir/params.txt
 echo "num_vecs=$vecs" >> $odir/params.txt
@@ -42,4 +42,4 @@ python3 $scriptdir/cancer-displacement.py --ref $ref \
                                --minimal_output 1 \
                                --verbose 0
 
-bash $scriptdir/convert-apply-transform.sh $ref $ref $odir $disp
+bash $scriptdir/convert-apply-transforms.sh $ref $ref $odir "$disp"

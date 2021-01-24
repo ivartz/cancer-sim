@@ -11,7 +11,7 @@ readarray -t models < <(find $mdir -type f -name warped.nii.gz | sort)
 
 for model in ${models[*]}; do
     #echo $model
-    mask=$(dirname $model)/interp-outer-ellipsoid-mask.nii.gz
+    mask=$(dirname $(dirname $model))/interp-outer-ellipsoid-mask.nii.gz
     #echo $mask
     : '
     If splitting the output of fslcc using space as delimiter,
