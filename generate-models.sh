@@ -1,5 +1,5 @@
 : '
-bash generate-models.sh <param-space.txt> <ref> <tumormask> <brainmask> <mdir>
+bash generate-models.sh <param-space.txt> <ref> <tumormask> <brainmask> <mdir> <minimal outputs>
 
 ,for instance:
 
@@ -11,6 +11,14 @@ ref=$2
 tmask=$3
 bmask=$4
 mdir=$5
+minimalo=$6
+
+if [[ $minimalo -eq 1 ]]
+then
+    cancersimfile="cancer-sim.sh"
+else
+    cancersimfile="cancer-sim-fulloutput.sh"
+fi
 
 # Make output model directory if not existing
 mkdircmd="mkdir -p $mdir"
@@ -88,7 +96,7 @@ for grange in ${gaussian_range_one_sided[*]}; do
                             # Create output folder
                             mkdir -p $mdir/$ofname
                             
-                            runcmd="bash $scriptdir/cancer-sim.sh $ref $tmask $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
+                            runcmd="bash $scriptdir/$cancersimfile $ref $tmask $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
                             #echo $runcmd
                             eval $runcmd
                             
@@ -115,7 +123,7 @@ for grange in ${gaussian_range_one_sided[*]}; do
                                         # Create output folder
                                         mkdir -p $mdir/$ofname
                                         
-                                        runcmd="bash $scriptdir/cancer-sim.sh $ref $tmask $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
+                                        runcmd="bash $scriptdir/$cancersimfile $ref $tmask $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
                                         #echo $runcmd
                                         eval $runcmd
                                         
@@ -134,7 +142,7 @@ for grange in ${gaussian_range_one_sided[*]}; do
                                             # Create output folder
                                             mkdir -p $mdir/$ofname
                                             
-                                            runcmd="bash $scriptdir/cancer-sim.sh $ref $tmask $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
+                                            runcmd="bash $scriptdir/$cancersimfile $ref $tmask $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
                                             #echo $runcmd
                                             eval $runcmd
                                             
