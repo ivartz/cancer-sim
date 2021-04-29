@@ -10,7 +10,7 @@ Simulating displacement of tissue in the brain caused by tumor growth or treatme
 - Irregularity <0,1]: The granularity of Perlin noise added to displacements to simulate irregularity of tumoral displacements.
 ## Use cases
 #### Benchmarking non-rigid registration methods on tumor MRI
-Version 1 and 2 can be used to deform MRIs in tumor regions mimicking pathology or treatment changes, and thereby create synthetic second time-point MRIs with associated groud trugh displacement fields. This data can be used to measure how well a non-rigid registration method produces the simulated ground truth displacement field.
+Version 1 and 2 can be used to deform MRIs in tumor regions mimicking pathology or treatment changes, and thereby create synthetic second time-point MRIs with associated ground truth displacement fields. This data can be used to measure how well a non-rigid registration method produces the simulated ground truth displacement field.
 ![fig](https://user-images.githubusercontent.com/10455104/115455401-35cac100-a222-11eb-8813-8221582f8c1d.PNG)
 **Fig. 2:** Comparing the displacement field from the radial growth model (v1) with the estimated field from [ANTs SyN](https://github.com/ANTsX/ANTs) (on the post-contrast T1-weighted MRI pair) reveals inconsistencies in displacement estimation in regions with poor textural features (such as necrosis).
 #### Quantifying maximum tissue displacement, infiltration and growth irregularity on real data
