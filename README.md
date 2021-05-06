@@ -1,13 +1,13 @@
 # cancer-sim
-Simulating displacement of tissue in the brain caused by tumor growth or treatment
+Robust radial deformation model to simulate overall displacement of tissue in the brain caused by tumor growth or treatment. Check out this [interactive example page](https://cancer-sim.com/) using the radial deformation model and [grid search](https://github.com/ivartz/cancer-sim-search) to approximate tissue displacement in longitudinal data of glioblastoma.
 
-*Current version: 2*
+*Latest version: 2*
 ![cancer-sim-v1-3](https://user-images.githubusercontent.com/10455104/115448354-ebdddd00-a219-11eb-9988-fd6ad716f82d.jpg)
 **Fig. 1:** Planned release schedule. Outlined tumor masks are shown for two time points (vertical). cancer-sim v1 (A) and v2 (A, B) are simplistic (by purpose) radial groth models that, when tuned, produces realistic-looking second time-point MRI examinations of either pushing tumor growth (v1, v2) or shrinking tumor from successful treatment (v2). This is accomplished by deforming first time-pont MRI using a displacement field produced by cancer-sim and linear interpolation. Version three builds upon the ideas of previous versions and produces more realistic displacement fields by using second time-point MRI and gradient-based optimization similar to non-rigid registration.
 ## Parameters (v1, v2)
-- Maximum tissue displacement [mm]: The largest tissue displacement produced, which is the scaled magnitude of vectors normal to the ellipsis in **Fig. 1** A and B.
-- Infiltration [0-1]: The extent of brain coverage, or smoothess of the displacement field in and outside of tumoral regions.
-- Irregularity <0,1]: The granularity of Perlin noise added to displacements to simulate irregularity of tumoral displacements.
+- **Maximum tissue displacement [mm]**: The largest tissue displacement produced, which is the scaled magnitude of vectors normal to the ellipsis in **Fig. 1** A and B.
+- **Infiltration [0-1]**: The extent of brain coverage, or smoothess of the displacement field in and outside of tumoral regions.
+- **Irregularity <0,1]**: The granularity of Perlin noise added to displacements to simulate irregularity of tumoral displacements.
 ## Use cases
 #### Benchmarking non-rigid registration methods on tumor MRI
 Version 1 and 2 can be used to deform MRIs in tumor regions mimicking pathology or treatment changes, and thereby create synthetic second time-point MRIs with associated ground truth displacement fields. This data can be used to measure how well a non-rigid registration method produces the simulated ground truth displacement field.
