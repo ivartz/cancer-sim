@@ -84,10 +84,16 @@ if __name__ == "__main__":
       default="T1c.nii.gz",
     )
     CLI.add_argument(
-      "--tumormask",
-      help="0=healthy (outside of tumor) tissue, anything else=a class of tumor tissue",
+      "--lesionmask",
+      help="0=healthy (outside of lesion) tissue, value specified by --lesionmask_value=lesion tissue used by the model",
       type=str,
       default="Segmentation.nii.gz",
+    )
+    CLI.add_argument(
+      "--lesionmask_value",
+      help="The integer value in --lesionmask to be used for computing the bouding box dimensions for the model",
+      type=int,
+      default=1,
     )
     CLI.add_argument(
       "--brainmask",
@@ -118,7 +124,7 @@ if __name__ == "__main__":
       "--num_vecs",
       help="The number of normal vectors used to simulate the explosive spread of tissue displacement",
       type=int,
-      default=64,
+      default=32,
     )
     CLI.add_argument(
       "--angle_thr",
@@ -182,19 +188,21 @@ if __name__ == "__main__":
         os.makedirs(args.out)
     
     ref_img = nib.load(args.ref)
-    tumormask_img = nib.load(args.tumormask)
+    lesionmask_img = nib.load(args.lesionmask)
     brainmask_img = nib.load(args.brainmask)
     
     xsize, ysize, zsize = ref_img.shape
     
-    # Transform tumormask to binary mask
-    tumormask_data = tumormask_img.get_fdata().astype(np.int)
-    tumormask_data[np.nonzero(tumormask_data)] = 1
+    # Transform lesionmask to binary mask
+    lesionmask_data = lesionmask_img.get_fdata().astype(np.int)
+    #lesionmask_data[np.nonzero(lesionmask_data)] = 1
+    lesionmask_data[lesionmask_data != np.int(args.lesionmask_value)] = 0
+    lesionmask_data[lesionmask_data == np.int(args.lesionmask_value)] = 1
     
     # Find the bounding box and geometric center
     # of the tumor based on the tumor mask
     tumorbbox_geom_center, tumorbbox_widths = \
-    bounding_box_mask(tumormask_data)
+    bounding_box_mask(lesionmask_data)
     cx, cy, cz = tumorbbox_geom_center
     wx, wy, wz = tumorbbox_widths
     
