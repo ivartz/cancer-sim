@@ -78,26 +78,20 @@ def bounding_box_mask(mask):
 if __name__ == "__main__":
     CLI=argparse.ArgumentParser()
     CLI.add_argument(
-      "--ref",
-      help="Input 3D nifti for reference, for instance a structural MRI",
-      type=str,
-      default="T1c.nii.gz",
-    )
-    CLI.add_argument(
       "--lesionmask",
-      help="0=healthy (outside of lesion) tissue, value specified by --lesionmask_value=lesion tissue used by the model",
+      help="0=healthy (outside of lesion) tissue, value specified by --lesionmask_value=lesion tissue used by the model. Assumed isotropic and header information used as reference by the model",
       type=str,
       default="Segmentation.nii.gz",
     )
     CLI.add_argument(
       "--lesionmask_value",
-      help="The integer value in --lesionmask to be used for computing the bouding box dimensions for the model",
-      type=int,
-      default=1,
+      help="The integer value in --lesionmask to be used for computing the bouding box dimensions for the model, or 'nonzero'",
+      type=str,
+      default="1",
     )
     CLI.add_argument(
       "--brainmask",
-      help="A binary mask with 1=brain tissue, 0=outside of the brain",
+      help="A binary mask with 1=brain tissue, 0=outside of the brain. Assumed isotropic and header information used as reference by the model",
       type=str,
       default="BrainExtractionMask.nii.gz",
     )
@@ -187,17 +181,20 @@ if __name__ == "__main__":
     if not os.path.exists(args.out):
         os.makedirs(args.out)
     
-    ref_img = nib.load(args.ref)
     lesionmask_img = nib.load(args.lesionmask)
     brainmask_img = nib.load(args.brainmask)
+    ref_img = brainmask_img
     
     xsize, ysize, zsize = ref_img.shape
     
     # Transform lesionmask to binary mask
     lesionmask_data = lesionmask_img.get_fdata().astype(np.int)
-    #lesionmask_data[np.nonzero(lesionmask_data)] = 1
-    lesionmask_data[lesionmask_data != np.int(args.lesionmask_value)] = 0
-    lesionmask_data[lesionmask_data == np.int(args.lesionmask_value)] = 1
+    lesionmask_value = args.lesionmask_value
+    if lesionmask_value == "nonzero":
+        lesionmask_data[np.nonzero(lesionmask_data)] = 1
+    else:
+        lesionmask_data[lesionmask_data != np.int(lesionmask_value)] = 0
+        lesionmask_data[lesionmask_data == np.int(lesionmask_value)] = 1
     
     # Find the bounding box and geometric center
     # of the tumor based on the tumor mask
@@ -960,13 +957,14 @@ if __name__ == "__main__":
     # Remove parts of outer ellipsoid mask that is outside of the brain
     outer_ellipsoid_data_interp[brainmask_data != 1] = 0
     
-    # Save the mask to nifti
-    if args.verbose > 0:
-        print("Saving interpolated outer ellipsoid mask")
-    outer_ellipsoid_img_interp = \
-    nib.spatialimages.SpatialImage(outer_ellipsoid_data_interp, affine=ref_img.affine, header=ref_img.header)
-    nib.save(outer_ellipsoid_img_interp, args.out+"/interp-outer-ellipsoid-mask.nii.gz")
-    
+    if args.minimal_output < 1:
+        # Save the mask to nifti
+        if args.verbose > 0:
+            print("Saving interpolated outer ellipsoid mask")
+        outer_ellipsoid_img_interp = \
+        nib.spatialimages.SpatialImage(outer_ellipsoid_data_interp, affine=ref_img.affine, header=ref_img.header)
+        nib.save(outer_ellipsoid_img_interp, args.out+"/interp-outer-ellipsoid-mask.nii.gz")
+        
     # Remove displacements from bounding boxes starting from outside of the brain
     field_data[brainmask_data != 1] = 0
     field_data_interp[brainmask_data != 1] = 0
@@ -987,7 +985,7 @@ if __name__ == "__main__":
     # 
     for dispnum, displacement in enumerate(args.displacement):
         # Create subfolder
-        subfol_name = f"{dispnum+1:04}"
+        subfol_name = f"{dispnum+1:03}"
         subdir = args.out+"/"+subfol_name
         if not os.path.exists(subdir):
             os.makedirs(subdir)

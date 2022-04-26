@@ -1,4 +1,4 @@
-# bash converttoantstransform.sh field.nii.gz field-ants.nii.gz
+# bash vec-to-comp.sh field.nii.gz field-comp.nii.gz
 
 infield=$1
 outfield=$2

@@ -1,17 +1,18 @@
 : '
-bash generate-models.sh <param-space.txt> <ref> <tumormask> <brainmask> <mdir> <minimal outputs>
+bash generate-models.sh <param-space.txt> <mri> <lesionmask> <lesionval> <brainmask> <mdir> <minimal outputs>
 
 ,for instance:
 
-bash generate-models.sh params.txt 2-T1c.nii.gz 2-Tumormask.nii.gz 2-BrainExtractionMask.nii.gz /mnt/HDD3TB/derivatives/cancer-sim-1 2>&1 | tee /mnt/HDD3TB/derivatives/cancer-sim-1/runlog.txt
+bash generate-models.sh params.txt 2-T1c.nii.gz 2-Tumormask.nii.gz 1 2-BrainExtractionMask.nii.gz /mnt/HDD3TB/derivatives/cancer-sim-1 1 2>&1 | tee /mnt/HDD3TB/derivatives/cancer-sim-1/runlog.txt
 '
 scriptdir=$(dirname $0)
 params=$1
-ref=$2
-tmask=$3
-bmask=$4
-mdir=$5
-minimalo=$6
+mri=$2
+lmask=$3
+lmaskval=$4
+bmask=$5
+mdir=$6
+minimalo=$7
 
 if [[ $minimalo -eq 1 ]]
 then
@@ -24,20 +25,20 @@ fi
 mkdircmd="mkdir -p $mdir"
 eval $mkdircmd
 
-# Copy reference image, tumor mask and brain mask to model directory
+# Copy mri image, lesion mask and brain mask to model directory
 : '
-cpcmd="cp $ref $mdir"
+cpcmd="cp $mri $mdir"
 eval $cpcmd
-cpcmd="cp $tmask $mdir"
+cpcmd="cp $lmask $mdir"
 eval $cpcmd
 cpcmd="cp $bmask $mdir"
 eval $cpcmd
 '
 
 # Log the repository version
-echo "https://github.com/ivartz/cancer-sim/commits/master" > $mdir/cancer-sim-version.txt
+#echo "https://github.com/ivartz/cancer-sim/commits/master" > $mdir/cancer-sim-version.txt
 # shortened hash
-echo $(git --git-dir=$scriptdir/.git log --pretty=format:'%h' -n 1) >> $mdir/cancer-sim-version.txt
+#echo $(git --git-dir=$scriptdir/.git log --pretty=format:'%h' -n 1) >> $mdir/cancer-sim-version.txt
 
 IFS="=" # Internal Field Separator, used for word splitting
 while read -r param values; do
@@ -48,11 +49,15 @@ verbose=0
 idx=1
 
 # Store the parameter space file in generated dataset
-cpcmd="cp $params $mdir"
-eval $cpcmd
+#cpcmd="cp $params $mdir"
+#eval $cpcmd
+
+# Remoe the original params file
+rmcmd="rm $params"
+eval $rmcmd
 
 # Start of file for saving model parameters
-echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "idx" "grange" "idf" "vecs" "angle" "splo" "sm" "pres" "pabs") > $mdir/params-all.txt
+#echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "idx" "grange" "idf" "vecs" "angle" "splo" "sm" "pres" "pabs") > $mdir/params-all.txt
     
 for grange in ${gaussian_range_one_sided[*]}; do
     if [ $verbose == 1 ]; then
@@ -84,19 +89,20 @@ for grange in ${gaussian_range_one_sided[*]}; do
                             if [ $verbose == 1 ]; then
                                 echo "7"
                             fi
-                            ofname=$(printf %04d $idx)
+                            ofname=$(printf %03d $idx)
                             
                             # Set parameters
                             pres=${perlin_noise_res[0]}
                             pabs=0
                             
                             # Save model parameters
-                            echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $grange $idf $vecs $angle $splo $sm $pres $pabs) >> $mdir/params-all.txt
+                            #echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $grange $idf $vecs $angle $splo $sm $pres $pabs) >> $mdir/params-all.txt
                             
                             # Create output folder
                             mkdir -p $mdir/$ofname
                             
-                            runcmd="bash $scriptdir/$cancersimfile $ref $tmask $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
+                            runcmd="bash $scriptdir/$cancersimfile $mri $lmask $lmaskval $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
+
                             #echo $runcmd
                             eval $runcmd
                             
@@ -115,15 +121,15 @@ for grange in ${gaussian_range_one_sided[*]}; do
                                     fi
                                     
                                     if (( $(echo "${perlin_noise_abs_max[0]} > 0" | bc -l) )); then
-                                        ofname=$(printf %04d $idx)
+                                        ofname=$(printf %03d $idx)
                                         
                                         # Save model parameters
-                                        echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $grange $idf $vecs $angle $splo $sm $pres $pabs) >> $mdir/params-all.txt
+                                        #echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $grange $idf $vecs $angle $splo $sm $pres $pabs) >> $mdir/params-all.txt
                                         
                                         # Create output folder
                                         mkdir -p $mdir/$ofname
                                         
-                                        runcmd="bash $scriptdir/$cancersimfile $ref $tmask $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
+                                        runcmd="bash $scriptdir/$cancersimfile $mri $lmask $lmaskval $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
                                         #echo $runcmd
                                         eval $runcmd
                                         
@@ -134,15 +140,15 @@ for grange in ${gaussian_range_one_sided[*]}; do
                                             # No operation, pass
                                             :
                                         else
-                                            ofname=$(printf %04d $idx)
+                                            ofname=$(printf %03d $idx)
                                             
                                             # Save model parameters
-                                            echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $grange $idf $vecs $angle $splo $sm $pres $pabs) >> $mdir/params-all.txt
+                                            #echo $(printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" $idx $grange $idf $vecs $angle $splo $sm $pres $pabs) >> $mdir/params-all.txt
                                             
                                             # Create output folder
                                             mkdir -p $mdir/$ofname
                                             
-                                            runcmd="bash $scriptdir/$cancersimfile $ref $tmask $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
+                                            runcmd="bash $scriptdir/$cancersimfile $mri $lmask $lmaskval $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
                                             #echo $runcmd
                                             eval $runcmd
                                             
