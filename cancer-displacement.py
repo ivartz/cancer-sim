@@ -4,6 +4,7 @@ import numpy as np
 import nibabel as nib
 import sys
 from scipy.ndimage import map_coordinates, gaussian_filter, binary_dilation
+from skimage.measure import label
 import time
 # Perlin noise library: https://github.com/pvigier/perlin-numpy
 from perlin_numpy import generate_perlin_noise_3d
@@ -197,8 +198,9 @@ if __name__ == "__main__":
         lesionmask_data[lesionmask_data == np.int(lesionmask_value)] = 1
     
     # Find largest connected component of lesionmask_data (and replace it with that mask)
-    assert(lesionmask_data.max() != 0) # assume at least 1 CC
-    largestCC = lesionmask_data == np.argmax(np.bincount(lesionmask_data.flat)[1:])+1
+    labels = label(lesionmask_data)
+    assert(labels.max() != 0) # assume at least 1 CC
+    largestCC = labels == np.argmax(np.bincount(labels.flat)[1:])+1
     lesionmask_data = largestCC
     
     # Find the bounding box and geometric center
