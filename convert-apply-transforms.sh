@@ -6,7 +6,7 @@ lmaskname=$(basename $lmask)
 resdir=$3
 disp=($4)
 
-START=$(date +%s)
+#START=$(date +%s)
 
 readarray -t subdirs < <(ls -d $resdir/*/ | sort -V)
 
@@ -43,7 +43,7 @@ for ((i=0; i<$numsubdirs; ++i)); do
                         --verbose 0
 done
 
-END=$(date +%s)
-DIFF=$(( $END - $START ))
-echo "Script execution time: $DIFF s"
-echo "$0 done"
+#END=$(date +%s)
+#DIFF=$(( $END - $START ))
+#echo "Script execution time: $DIFF s"
+#echo "$0 done"

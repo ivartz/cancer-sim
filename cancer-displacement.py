@@ -172,7 +172,7 @@ if __name__ == "__main__":
     args = CLI.parse_args()
         
     # Store start time for the script
-    script_start_time = time.time()
+    #script_start_time = time.time()
     
     # Set seed for random number generator used for Perlin noise generation
     random_seed = 0
@@ -1087,5 +1087,5 @@ if __name__ == "__main__":
             field_oppos_img_interp = nib.spatialimages.SpatialImage(-field_data_interp, affine=ref_img.affine, header=ref_img.header)
             nib.save(field_oppos_img_interp, subdir+"/interp-neg-field-"+"{:.2f}".format(displacement)+"mm.nii.gz")
     
-    print("Script execution time: %i s" % np.int(time.time()-script_start_time))
-    print(sys.argv[0] + " done")
+    #print("Script execution time: %i s" % np.int(time.time()-script_start_time))
+    #print(sys.argv[0] + " done")
