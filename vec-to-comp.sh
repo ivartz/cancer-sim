@@ -21,3 +21,6 @@ eval $rmcmd
 rmcmd="rm ${outfieldwoe}0002.nii.gz"
 #echo $rmcmd
 eval $rmcmd
+rmcmd="rm $infield"
+#echo $rmcmd
+eval $rmcmd

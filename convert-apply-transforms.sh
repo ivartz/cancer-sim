@@ -1,7 +1,6 @@
-#bash convert-apply-transform.sh mri lmask results <displacement>
+#bash convert-apply-transform.sh mris lmask results <displacement>
 scriptdir=$(dirname $0)
-mri=$1
-mriname=$(basename $mri)
+mris=($1)
 lmask=$2
 lmaskname=$(basename $lmask)
 resdir=$3
@@ -22,14 +21,18 @@ for ((i=0; i<$numsubdirs; ++i)); do
     # Interpolated positive field
     bash $scriptdir/vec-to-comp.sh ${d}interp-field-${displacement}mm.nii.gz ${d}interp-field-${displacement}mm-comp.nii.gz
 
-    # Use interpolated positive field to displace the MRI
-    antsApplyTransforms --dimensionality 3 \
-                        --input $mri \
-                        --reference-image $mri \
-                        --output ${d}${mriname%.*.*}-aug-${displacement}mm.nii.gz \
-                        --interpolation Linear \
-                        --transform ${d}interp-field-${displacement}mm-comp.nii.gz \
-                        --verbose 0
+    # Use interpolated positive field to displace the MRIs
+    for mri in ${mris[*]}
+    do
+        mriname=$(basename $mri)
+        antsApplyTransforms --dimensionality 3 \
+                            --input $mri \
+                            --reference-image $mri \
+                            --output ${d}${mriname%.*.*}-aug-${displacement}mm.nii.gz \
+                            --interpolation Linear \
+                            --transform ${d}interp-field-${displacement}mm-comp.nii.gz \
+                            --verbose 0
+    done
     # Use interpolated positive field to displace the lesion mask
     antsApplyTransforms --dimensionality 3 \
                         --input $lmask \

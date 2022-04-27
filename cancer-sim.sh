@@ -1,7 +1,7 @@
-#bash cancer-sim.sh <mri> <lesionmask> <lesionmaskval> <brainmask> <disp> <grange> <idf> <vecs> <angle> <splo> <sm> <pres> <pabs> <odir>
+#bash cancer-sim.sh <mris> <lesionmask> <lesionmaskval> <brainmask> <disp> <grange> <idf> <vecs> <angle> <splo> <sm> <pres> <pabs> <odir>
 
 scriptdir=$(dirname $0)
-mri=$1
+mris=($1)
 lmask=$2
 lmaskval=$3
 bmask=$4
@@ -43,4 +43,4 @@ python3 $scriptdir/cancer-displacement.py --lesionmask $lmask \
                                --minimal_output 1 \
                                --verbose 0
 
-bash $scriptdir/convert-apply-transforms.sh $mri $lmask $odir "$disp"
+bash $scriptdir/convert-apply-transforms.sh "${mris[*]}" $lmask $odir "$disp"

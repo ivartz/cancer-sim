@@ -1,5 +1,5 @@
 : '
-bash generate-models.sh <param-space.txt> <mri> <lesionmask> <lesionval> <brainmask> <mdir> <minimal outputs>
+bash generate-models.sh <param-space.txt> <mris> <lesionmask> <lesionval> <brainmask> <mdir> <minimal outputs>
 
 ,for instance:
 
@@ -7,7 +7,7 @@ bash generate-models.sh params.txt 2-T1c.nii.gz 2-Tumormask.nii.gz 1 2-BrainExtr
 '
 scriptdir=$(dirname $0)
 params=$1
-mri=$2
+mris=($2)
 lmask=$3
 lmaskval=$4
 bmask=$5
@@ -101,7 +101,7 @@ for grange in ${gaussian_range_one_sided[*]}; do
                             # Create output folder
                             mkdir -p $mdir/$ofname
                             
-                            runcmd="bash $scriptdir/$cancersimfile $mri $lmask $lmaskval $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
+                            runcmd="bash $scriptdir/$cancersimfile '${mris[*]}' $lmask $lmaskval $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
 
                             #echo $runcmd
                             eval $runcmd
@@ -129,7 +129,7 @@ for grange in ${gaussian_range_one_sided[*]}; do
                                         # Create output folder
                                         mkdir -p $mdir/$ofname
                                         
-                                        runcmd="bash $scriptdir/$cancersimfile $mri $lmask $lmaskval $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
+                                        runcmd="bash $scriptdir/$cancersimfile '${mris[*]}' $lmask $lmaskval $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
                                         #echo $runcmd
                                         eval $runcmd
                                         
@@ -148,7 +148,7 @@ for grange in ${gaussian_range_one_sided[*]}; do
                                             # Create output folder
                                             mkdir -p $mdir/$ofname
                                             
-                                            runcmd="bash $scriptdir/$cancersimfile $mri $lmask $lmaskval $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
+                                            runcmd="bash $scriptdir/$cancersimfile '${mris[*]}' $lmask $lmaskval $bmask '${displacement[*]}' $grange $idf $vecs $angle $splo $sm $pres $pabs $mdir/$ofname"
                                             #echo $runcmd
                                             eval $runcmd
                                             
@@ -165,4 +165,4 @@ for grange in ${gaussian_range_one_sided[*]}; do
     done
 done
 
-echo "All models generated"
+#echo "All models generated"
