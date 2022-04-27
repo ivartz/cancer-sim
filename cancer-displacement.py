@@ -196,6 +196,11 @@ if __name__ == "__main__":
         lesionmask_data[lesionmask_data != np.int(lesionmask_value)] = 0
         lesionmask_data[lesionmask_data == np.int(lesionmask_value)] = 1
     
+    # Find largest connected component of lesionmask_data (and replace it with that mask)
+    assert(lesionmask_data.max() != 0) # assume at least 1 CC
+    largestCC = lesionmask_data == np.argmax(np.bincount(lesionmask_data.flat)[1:])+1
+    lesionmask_data = largestCC
+    
     # Find the bounding box and geometric center
     # of the tumor based on the tumor mask
     tumorbbox_geom_center, tumorbbox_widths = \
