@@ -7,6 +7,10 @@ Robust radial deformation model to simulate overall displacement of tissue in th
 
 **Fig. 1:** Description and release schedule. Outlined tumor masks are shown for two time points (vertical). cancer-sim v1 (A) and v2 (A, B) are robust radial growth models that, when tuned, produces realistic-looking second time-point MRI examinations of either pushing tumor growth (v1, v2) or shrinking tumor from successful treatment (v2). This is accomplished by deforming first time-pont MRI using a displacement field produced by cancer-sim and linear interpolation. Version three (not yet available) builds upon the ideas of previous versions and produces more realistic displacement fields by using second time-point MRI and gradient-based optimization similar to non-rigid registration.
 
+## Requirements
+
+The lesionmask and brainmask input nifti files need to be stored in LPI voxel order, see [1](https://andysbrainbook.readthedocs.io/en/latest/FrequentlyAskedQuestions/FrequentlyAskedQuestions.html) and [2](http://www.grahamwideman.com/gw/brain/orientation/orientterms.htm).
+
 ## How to run
 
 - To create a single displacement field based on a brain and lesion mask, follow printed instructions from `python3 cancer-displacement.py --help`
